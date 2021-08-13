@@ -4,16 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"math"
 	"math/rand"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
+// errorShutdown shuts down the software if there's an error
 func errorShutdown() {
 	fmt.Println("\nExiting program")
 	os.Exit(1)
@@ -28,8 +29,8 @@ type HeaderRef struct {
 
 // RefLoad loads a reference sequence DNA file (FASTA format).
 // It returns a slice of HeaderRef structs (individual reference header, sequence and reverse complement).
+// Lower case nucleotides are converted to uppercase.
 func RefLoad(refFile string) []*HeaderRef {
-	var totalLength int
 	var refSlice []*HeaderRef
 	var singleHeaderRef *HeaderRef
 	var header string
@@ -51,44 +52,45 @@ func RefLoad(refFile string) []*HeaderRef {
 			refSeq.Reset()
 		case len(fastaLine) != 0:
 			refSeq.WriteString(strings.ToUpper(fastaLine))
-			totalLength += len(fastaLine)
 		}
 	}
 	seq := refSeq.String()
 	singleHeaderRef = &HeaderRef{header, seq, reverseComplement(seq)}
 	refSlice = append(refSlice, singleHeaderRef)
 	refSlice = refSlice[1:]
-	fmt.Println("   --->", len(refSlice), "sequences loaded")
+	fmt.Println("     --->", len(refSlice), "sequences loaded")
 	f.Close()
 	return refSlice
 }
 
-// Reverse complements a DNA sequence
-func reverseComplement(seq string) string {
-	complement := map[rune]rune{
-		'A': 'T',
-		'C': 'G',
-		'G': 'C',
-		'T': 'A',
-		'N': 'N',
+// Reverse complementary DNA sequence
+// Nucleotides must be upper case
+// Only complements to ACGT are substituted.  Others remain the same.
+func reverseComplement(s string) string {
+	var dnaComplement = strings.NewReplacer(
+		"A", "T", "T", "A", "G", "C", "C", "G",
+	)
+	complement := dnaComplement.Replace(s)
+	reverseComplement := make([]byte, len(complement))
+	for i, j := 0, len(reverseComplement)-1; i < len(reverseComplement); i, j = i+1, j-1 {
+		reverseComplement[i] = complement[j]
 	}
-	runes := []rune(seq)
-	var result bytes.Buffer
-	for i := len(runes) - 1; i >= 0; i-- {
-		result.WriteRune(complement[runes[i]])
-	}
-	return result.String()
+	return string(reverseComplement)
 }
 
-func getKmers(ref []*HeaderRef, nt int) map[string][]int {
+// Identify all unique kmers in provided sense strand sequences
+// TODO: should the reverse complement be included?
+// Output is a mpa with kmer seq as key and a slice of 1s and 0s indicating which
+// input target sequence the kmer is present in.
+func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	refLen := len(ref)
 	kmers := make(map[string][]int)
 	count := 0
 	for _, hr := range ref {
 		pos := 0
 		ref_seq_len := len(hr.Seq)
-		for pos <= ref_seq_len-nt {
-			fwd_seq := hr.Seq[pos : pos+nt]
+		for pos <= ref_seq_len-kmerLen {
+			fwd_seq := hr.Seq[pos : pos+kmerLen]
 			if _, ok := kmers[fwd_seq]; ok {
 				kmers[fwd_seq][count] = 1
 			} else {
@@ -102,6 +104,8 @@ func getKmers(ref []*HeaderRef, nt int) map[string][]int {
 	return kmers
 }
 
+// Identifies off-target kmers present in the off-target (either orientation) set
+// This is done concurrently to improve speed
 func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[string]bool {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(otRef))
@@ -337,29 +341,36 @@ func geoMean(input []int) float64 {
 
 func main() {
 	fmt.Println("\ndsRNA construct finder")
-	args := os.Args[1:]
+	fmt.Println("")
+	refFile := flag.String("targets", "", "Path to target FASTA file (required)")
+	otRefFile := flag.String("offTargets", "", "Path to off-target FASTA file")
+	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
+	consLength := flag.Int("constructLen", 300, "dsRNA sense arm length")
+	iterations := flag.Int("iterations", 100, "No. of iterations")
+	flag.Parse()
 	fmt.Println("Loading target sequences")
-	ref := RefLoad(args[0])
+	ref := RefLoad(*refFile)
 	fmt.Println("Getting target sequence kmers")
-	kmerLength, _ := strconv.Atoi(args[2])
-	kmers := getKmers(ref, kmerLength)
-	fmt.Println("Loading off-target sequences")
-	otRef := RefLoad(args[1])
-	fmt.Println("Finding and subtracting off-target kmers")
-	otKmers := conGetOTKmers(kmers, otRef, kmerLength)
-	otRef = nil
-	goodKmers := removeOTKmers(kmers, otKmers)
+	goodKmers := getKmers(ref, *kmerLength)
+	if *otRefFile != "" {
+		fmt.Println("Loading off-target sequences")
+		otRef := RefLoad(*otRefFile)
+		fmt.Println("Finding and subtracting off-target kmers")
+		otKmers := conGetOTKmers(goodKmers, otRef, *kmerLength)
+		otRef = nil
+		goodKmers = removeOTKmers(goodKmers, otKmers)
+	}
+
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)
 	fmt.Println("Finding best construct")
-	consLength, _ := strconv.Atoi(args[3])
-	iterations, _ := strconv.Atoi(args[4])
-	selConstruct := conBestConstruct(goodKmers, kmerCts, kmerLength, len(ref), consLength, iterations)
+	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
 	fmt.Println("\nResults:")
 	fmt.Println("\nGeometric mean of kmer hits to each target sequence:", selConstruct.geoMean)
 	for i, j := range selConstruct.kmerHits {
-		fmt.Println(ref[i].Header, "-----", j, "x", kmerLength, "nt hits")
+		fmt.Println(ref[i].Header, "-----", j, "x", *kmerLength, "nt hits")
 	}
 	fmt.Println("\ndsRNA sense-arm sequence:")
 	fmt.Println(selConstruct.seq)
+	fmt.Println("")
 }

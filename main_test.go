@@ -53,6 +53,13 @@ func Test_reverseComplement(t *testing.T) {
 			},
 			want: "AGTT",
 		},
+		{
+			name: "badNuc",
+			args: args{
+				seq: "AACH",
+			},
+			want: "HGTT",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -68,6 +68,25 @@ func RefLoad(refFile string) []*HeaderRef {
 	return refSlice
 }
 
+func biasMod(ref []*HeaderRef, header string, bias int) ([]*HeaderRef, error) {
+	var biasRef []*HeaderRef
+	headerPresent := false
+	for _, hr := range ref {
+		biasRef = append(biasRef, hr)
+		if hr.Header == header {
+			headerPresent = true
+			for i := 0; i < bias; i++ {
+				biasRef = append(biasRef, hr)
+			}
+		}
+	}
+	if headerPresent {
+		return biasRef, nil
+	} else {
+		return biasRef, errors.New("bias reference header not present in input file")
+	}
+}
+
 // Reverse complementary DNA sequence
 // Nucleotides must be upper case
 // Only complements to ACGT are substituted.  Others remain the same.
@@ -344,16 +363,25 @@ func geoMean(input []int) float64 {
 	return math.Pow(p, 1/float64(len(input)))
 }
 
-func outputTable(kmerLength *int, selConstruct *construct, ref []*HeaderRef) {
+func outputTable(kmerLength *int, selConstruct *construct, ref []*HeaderRef) []int {
 	swg := metrics.NewSmithWatermanGotoh()
 	kmerLenStr := strconv.Itoa(*kmerLength)
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Target sequence header", "Exact " + kmerLenStr + "nt matches", "Smith Waterman similarity"})
+	headerMap := make(map[string]bool)
+	var modKmerHits []int
 	for i, j := range selConstruct.kmerHits {
-		table.Append([]string{ref[i].Header, strconv.Itoa(j), strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg), 'f', 3, 64)})
+		if _, ok := headerMap[ref[i].Header]; !ok {
+			table.Append([]string{ref[i].Header, strconv.Itoa(j), strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg), 'f', 3, 64)})
+			modKmerHits = append(modKmerHits, j)
+			headerMap[ref[i].Header] = true
+
+		}
+
 	}
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.Render()
+	return modKmerHits
 }
 
 func main() {
@@ -364,9 +392,14 @@ func main() {
 	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
 	consLength := flag.Int("constructLen", 300, "dsRNA sense arm length")
 	iterations := flag.Int("iterations", 100, "No. of iterations")
+	biasHeader := flag.String("biasHeader", "", "Header of target seqeunce to bias toward")
+	biasLvl := flag.Int("biasLvl", 0, "Level of bias to apply")
 	flag.Parse()
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
+	if *biasHeader != "" {
+		ref, _ = biasMod(ref, *biasHeader, *biasLvl)
+	}
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)
 	if *otRefFile != "" {
@@ -383,8 +416,8 @@ func main() {
 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
 	if selConstruct != nil {
 		fmt.Println("\nResults:")
-		outputTable(kmerLength, selConstruct, ref)
-		fmt.Println("\nGeometric mean of kmer hits to each target sequence:", selConstruct.geoMean)
+		modKmerHits := outputTable(kmerLength, selConstruct, ref)
+		fmt.Println("\nGeometric mean of kmer hits to each target sequence:", geoMean(modKmerHits))
 		fmt.Println("\ndsRNA sense-arm sequence:")
 		fmt.Println(selConstruct.seq)
 		fmt.Println("")

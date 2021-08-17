@@ -9,9 +9,14 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/adrg/strutil"
+	"github.com/adrg/strutil/metrics"
+	"github.com/olekukonko/tablewriter"
 )
 
 // errorShutdown shuts down the software if there's an error
@@ -339,6 +344,18 @@ func geoMean(input []int) float64 {
 	return math.Pow(p, 1/float64(len(input)))
 }
 
+func outputTable(kmerLength *int, selConstruct *construct, ref []*HeaderRef) {
+	swg := metrics.NewSmithWatermanGotoh()
+	kmerLenStr := strconv.Itoa(*kmerLength)
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Target sequence header", "Exact " + kmerLenStr + "nt matches", "Smith Waterman similarity"})
+	for i, j := range selConstruct.kmerHits {
+		table.Append([]string{ref[i].Header, strconv.Itoa(j), strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg), 'f', 3, 64)})
+	}
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.Render()
+}
+
 func main() {
 	fmt.Println("\ndsRNA construct finder")
 	fmt.Println("")
@@ -360,17 +377,18 @@ func main() {
 		otRef = nil
 		goodKmers = removeOTKmers(goodKmers, otKmers)
 	}
-
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)
 	fmt.Println("Finding best construct")
 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
-	fmt.Println("\nResults:")
-	fmt.Println("\nGeometric mean of kmer hits to each target sequence:", selConstruct.geoMean)
-	for i, j := range selConstruct.kmerHits {
-		fmt.Println(ref[i].Header, "-----", j, "x", *kmerLength, "nt hits")
+	if selConstruct != nil {
+		fmt.Println("\nResults:")
+		outputTable(kmerLength, selConstruct, ref)
+		fmt.Println("\nGeometric mean of kmer hits to each target sequence:", selConstruct.geoMean)
+		fmt.Println("\ndsRNA sense-arm sequence:")
+		fmt.Println(selConstruct.seq)
+		fmt.Println("")
+	} else {
+		fmt.Println("Could not identify a dsRNA sense arm sequence.  Check input format and sequence lengths")
 	}
-	fmt.Println("\ndsRNA sense-arm sequence:")
-	fmt.Println(selConstruct.seq)
-	fmt.Println("")
 }

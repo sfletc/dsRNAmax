@@ -31,7 +31,7 @@ func main() {
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {
-		ref, _ = biasMod(ref, *biasHeader, *biasLvl)
+		ref, _ = biasMod(ref, *biasHeader, *biasLvl) //TODO: deal with error
 	}
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)

@@ -5,4 +5,19 @@ Crop protection is undergoing significant evolution, with a move toward sustaina
 dsRNAd (dsRNA designer) is a software package using a biologically relevant k-mer based approach for multi-target dsRNA design while mitigating unintended impacts to beneficial organisms.  
 
 Where a specific target is considered a priority, the design algorithm can be biased toward that target.  This package aims to increase the simplicity, efficacy and cost-effectiveness RNAi-based crop protection approaches, aiding translation to market.    
-______
+
+----
+# Installation
+
+- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases tab](https://www.google.com))
+- To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build -buildvcs=false .``` - this will generate an exectaible for the operating system it was built on, with build dependencices downlaoded automatically.      
+
+----
+# Usage
+
+----
+# Troubleshooting
+
+----
+# Cite
+

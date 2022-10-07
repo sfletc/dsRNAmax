@@ -8,13 +8,13 @@ Where a specific target is considered a priority, the design algorithm can be bi
 
 ![Alt text](./bioinf_github.jpg "Title")
 
-----
+
 # Installation
 
 - Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases page](https://github.com/sfletc/dsRNAd/releases)
 - To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencices downloaded automatically.      
 
-----
+
 # Usage
 
 - The only required input is a FASTA file containing the target sequences the dsRNA should be optimised for. This will generate a 300nt dsRNA sense arm sequence that attempts to maximise the number of dsRNA-derived 21nt kmers that exactly match each input sequence.
@@ -115,12 +115,12 @@ dsRNA sense-arm sequence - 37.3% GC content
 GCAGAAACGGACAAAATCACCTTGGAAATTGCCAGGCTTCTTAAAGAAGATTTCTTGCAACAAAACTCATACTCTTCTTATGACAGATTCTGTCCATTCTATAAAACTGTCGGTATGTTGAGAAACATGATCGGTTTGTACGATATGGCGAGACACGCCGTAGAATCAACCGCACAATCAGAAAATAAGATCACTTGGAACGTAATAAGAGATTCAATGAGTGGAATTTTATATCAACTTAGCAGTATGAAATTTAAGGATCCCGTAAAAGATGGTGAAGCTAAGATCAAGGCAGATTTT
 ```
 
-----
+
 # Troubleshooting
 
 Why was no dsRNA generated?
 - if the off-target sequences are too similar to the target sequences, no construct of the specified sense arm length can be generated.  Try reducing the kmer length and/or the construct length.  
 
-----
+
 # Cite
 

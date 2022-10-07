@@ -19,9 +19,12 @@ Where a specific target is considered a priority, the design algorithm can be bi
 
 - The only required input is a FASTA file containing the target sequences the dsRNA should be optimised for. This will generate a 300nt dsRNA sense arm sequence that attempts to maximise the number of dsRNA-derived 21nt kmers that exactly match each input sequence.
 
+Command:
 ```
  .\dsRNAd_Win.exe -h
-
+```
+Output:
+```
 dsRNAd - dsRNA designer
 Version:         1.0.1
 
@@ -41,12 +44,16 @@ Usage of .\dsRNAd_Win.exe:
   -targets string
         Path to target FASTA file (required)
 ```
-
+-----
 
 An example command and command line output is shown for the western corn rootworm and southern corn rootworm vATPase-A transcripts using the ```-targets``` flag.
 
+Command:
 ```
 .\dsRNAd_Win.exe -targets .\cr.fa
+```
+Output:
+```
 
 dsRNAd - dsRNA designer
 Version:         1.0.1
@@ -77,11 +84,16 @@ Geometric mean of kmer hits to each target sequence: 234.98085028359225
 dsRNA sense-arm sequence - 43.3% GC content
 ATCGGAGATGAAGAGAAGGAAGGGCAGTATGGTTACGTCCATGCTGTCTCAGGTCCAGTCGTTACTGCTGAGAAAATGTCTGGTTCTGCTATGTACGAACTGGTGCGTGTAGGATACTATGAGCTGGTAGGAGAAATCATTAGATTGGAAGGTGACATGGCTACTATTCAGGTATACGAAGAAACATCAGGTGTAACTGTTGGTGATCCAGTATTAAGAACTGGTAAACCACTTTCAGTAGAACTTGGACCTGGTATTATGGGTTCCATTTTTGATGGTATCCAACGTCCATTGAAAGAC
 ```
+-----
 
 Additionally, off-target sequences can be added as a single FASTA file.  In this example, the transcriptome of the beneficial seven-spotted ladybeetle is added using the ```-offTargets``` flag.  No 21nt match from the generated dsRNA (in either orientation) will perfectly match any off-target sequence.
 
+Command:
 ```
 .\dsRNAd_Win.exe -targets .\cr.fa -offTargets .\GCF_907165205.1_icCocSept1.1_rna.fna
+```
+Output:
+```
 
 dsRNAd - dsRNA designer
 Version:         1.0.1

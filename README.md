@@ -6,6 +6,8 @@ dsRNAd (dsRNA designer) is a software package using a biologically relevant k-me
 
 Where a specific target is considered a priority, the design algorithm can be biased toward that target.  This package aims to increase the simplicity, efficacy and cost-effectiveness RNAi-based crop protection approaches, aiding translation to market.    
 
+![Alt text](./bioinf_github.jpg "Title")
+
 ----
 # Installation
 

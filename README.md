@@ -9,8 +9,8 @@ Where a specific target is considered a priority, the design algorithm can be bi
 ----
 # Installation
 
-- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases tab](https://www.google.com))
-- To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build -buildvcs=false .``` - this will generate an exectaible for the operating system it was built on, with build dependencices downlaoded automatically.      
+- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases page](https://github.com/sfletc/dsRNAd/releases)
+- To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencices downloaded automatically.      
 
 ----
 # Usage

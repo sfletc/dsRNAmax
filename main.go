@@ -39,9 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Println(*refFile)
-
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {

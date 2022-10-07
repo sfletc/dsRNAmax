@@ -1,10 +1,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 )
+
+var Version = "1.0.1"
 
 // errorShutdown shuts down the software if there's an error
 func errorShutdown() {
@@ -12,7 +16,7 @@ func errorShutdown() {
 	os.Exit(1)
 }
 
-func clInput() (*string, *string, *int, *int, *int, *string, *int) {
+func clInput() (*string, *string, *int, *int, *int, *string, *int, error) {
 	refFile := flag.String("targets", "", "Path to target FASTA file (required)")
 	otRefFile := flag.String("offTargets", "", "Path to off-target FASTA file")
 	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
@@ -21,13 +25,23 @@ func clInput() (*string, *string, *int, *int, *int, *string, *int) {
 	biasHeader := flag.String("biasHeader", "", "Header of target sequence to bias toward")
 	biasLvl := flag.Int("biasLvl", 0, "Level of bias to apply")
 	flag.Parse()
-	return refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl
+	if *refFile == "" {
+		return refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, errors.New("error: no target FASTA file was specificed")
+	}
+	return refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, nil
 }
 
 func main() {
-	fmt.Println("\ndsRNA construct finder")
+	fmt.Println("\ndsRNAd - dsRNA designer")
+	fmt.Println("Version:\t", Version)
 	fmt.Println("")
-	refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl := clInput()
+	refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, err := clInput()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(*refFile)
+
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {

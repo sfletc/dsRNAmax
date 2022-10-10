@@ -1,8 +1,8 @@
-# dsRNAd: a multi-target double-stranded RNA design package for enhanced crop protection
+# dsRNAmax: a multi-target double-stranded RNA design package for enhanced crop protection
 
 Crop protection increasingly relies on sustainable approaches that do not adversely impact the environment or human health.  RNA interference (RNAi) is being used via application or expression of double-stranded RNA (dsRNA) to target viral, fungal and insect pests and pathogens.  
 
-dsRNAd (dsRNA designer) is a software package using a biologically relevant kmer based approach for multi-target dsRNA design while mitigating unintended impacts to beneficial organisms.  Where a specific target is considered a priority, the design algorithm can be biased toward that target.  Output sense arm sequences can be synthesised as dsRNAs, with their efficacy and ability to mitigate off-target impacts determined experimentally.   
+dsRNAmax (dsRNAmaximizer) is a software package using a biologically relevant kmer based approach for multi-target dsRNA design while mitigating unintended impacts to beneficial organisms.  Where a specific target is considered a priority, the design algorithm can be biased toward that target.  Output sense arm sequences can be synthesised as dsRNAs, with their efficacy and ability to mitigate off-target impacts determined experimentally.   
     
 
 ![Alt text](./bioinf_github.jpg "dsRNA design")
@@ -10,7 +10,7 @@ dsRNAd (dsRNA designer) is a software package using a biologically relevant kmer
 
 # Installation
 
-- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases page](https://github.com/sfletc/dsRNAd/releases). For Linux and MacOS, ```chmod +x {executable}``` may be required.  
+- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases page](https://github.com/sfletc/dsRNAmax/releases). For Linux and MacOS, ```chmod +x {executable}``` may be required.  
 - To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencies downloaded automatically.      
 
 
@@ -22,14 +22,14 @@ dsRNAd (dsRNA designer) is a software package using a biologically relevant kmer
 
 Command:
 ```
- .\dsRNAd_Win.exe -h
+ .\dsRNAmax_Win.exe -h
 ```
 Output:
 ```
-dsRNAd - dsRNA designer
+dsRNAmax - dsRNA designer
 Version:         1.0.1
 
-Usage of .\dsRNAd_Win.exe:
+Usage of .\dsRNAmax_Win.exe:
   -biasHeader string
         Header of target sequence to bias toward
   -biasLvl int
@@ -53,12 +53,12 @@ An example command and command line output is shown for the western corn rootwor
 
 Command:
 ```
-.\dsRNAd_Win.exe -targets .\cr.fa
+.\dsRNAmax_Win.exe -targets .\cr.fa
 ```
 Output:
 ```
 
-dsRNAd - dsRNA designer
+dsRNAmax - dsRNA maximizer
 Version:         1.0.1
 
 .\cr.fa
@@ -95,12 +95,12 @@ Additionally, off-target sequences can be added as a single FASTA file.  In this
 
 Command:
 ```
-.\dsRNAd_Win.exe -targets .\cr.fa -offTargets .\GCF_907165205.1_icCocSept1.1_rna.fna
+.\dsRNAmax_Win.exe -targets .\cr.fa -offTargets .\GCF_907165205.1_icCocSept1.1_rna.fna
 ```
 Output:
 ```
 
-dsRNAd - dsRNA designer
+dsRNAmax - dsRNA maximizer
 Version:         1.0.1
 
 .\cr.fa
@@ -138,13 +138,13 @@ GCAGAAACGGACAAAATCACCTTGGAAATTGCCAGGCTTCTTAAAGAAGATTTCTTGCAACAAAACTCATACTCTTCTTA
 In some cases, it's desirable to maximise the number of kmers matching a particular sequence, while still maintaining effectiveness against other input targets.  This can be achieved by using ```-biasLvL``` and ```-biasHeader```.  For ```-biasHeader```, the full header (excluding ">") should be entered - use quotes if there are spaces (see below for example).  For ```-biasLvl```, input an integer for the degree of bias to apply.  The integer used will add additional copies of the selected sequence to the design process, with its effect depended on the total number of input target sequences, so it's worth trialling different degrees of bias (starting at 1).  
 
 ```
-.\dsRNAd_Win.exe -targets .\software\dsRNAConsDesigner\cr.fa -biasLvl 1 -biasHeader "XM_028294206.1 PREDICTED: Diabrotica virgifera virgifera V-type proton ATPase catalytic subunit A (LOC114343389), mRNA"
+.\dsRNAmax_Win.exe -targets .\software\dsRNAConsDesigner\cr.fa -biasLvl 1 -biasHeader "XM_028294206.1 PREDICTED: Diabrotica virgifera virgifera V-type proton ATPase catalytic subunit A (LOC114343389), mRNA"
 ```
 
 Output:
 
 ```
-dsRNAd - dsRNA designer
+dsRNAmax - dsRNA maximizer
 Version:         1.0.1
 
 .\cr.fa

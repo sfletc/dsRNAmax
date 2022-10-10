@@ -26,7 +26,7 @@ Command:
 ```
 Output:
 ```
-dsRNAmax - dsRNA designer
+dsRNAmax - dsRNA maximizer
 Version:         1.0.1
 
 Usage of .\dsRNAmax_Win.exe:

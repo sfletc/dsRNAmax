@@ -1,4 +1,4 @@
-module dsRNAd
+module dsRNAmax
 
 go 1.18
 

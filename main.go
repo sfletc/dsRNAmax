@@ -10,7 +10,7 @@ import (
 
 var Version = "1.0.1"
 
-// errorShutdown shuts down the software if there's an error
+
 func errorShutdown() {
 	fmt.Println("\nExiting program")
 	os.Exit(1)
@@ -32,7 +32,7 @@ func clInput() (*string, *string, *int, *int, *int, *string, *int, error) {
 }
 
 func main() {
-	fmt.Println("\ndsRNAd - dsRNA designer")
+	fmt.Println("\ndsRNAmax - dsRNA maximizer")
 	fmt.Println("Version:\t", Version)
 	fmt.Println("")
 	refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, err := clInput()
@@ -43,7 +43,10 @@ func main() {
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {
-		ref, _ = biasMod(ref, *biasHeader, *biasLvl) //TODO: deal with error
+		ref, err = biasMod(ref, *biasHeader, *biasLvl)
+		if err != nil {
+			log.Fatal(err)
+		} 
 	}
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)

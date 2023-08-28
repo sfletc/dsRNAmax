@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -130,8 +131,8 @@ func buildr(kmerCtsCpy map[string]int, fcons string, kmerLen int) string {
 	}
 }
 
-//Select the best construct of the specified length from the provided consensus sequence
-//by maximising the geometric mean of the number of kmers to match each input target sequence
+// Select the best construct of the specified length from the provided consensus sequence
+// by maximising the geometric mean of the number of kmers to match each input target sequence
 func bestConstruct(goodKmers map[string][]int, consensus string, constructLen int, kmerLen int, seqLen int) (*construct, error) {
 	if len(consensus) < constructLen {
 		var bad []int
@@ -162,26 +163,30 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 			conScores[x] += y
 		}
 	}
-	if geoMean(conScores) > bestScore {
-		bestScore = geoMean(conScores)
-		bestPos = i
-		bestConScores = conScores
+	mean, err := geoMean(conScores)
+	if err == nil {
+		if mean > bestScore {
+			bestScore = mean
+			bestPos = i
+			bestConScores = conScores
+		}
 	}
 	return bestScore, bestPos, bestConScores
 }
 
-//Return the geometric mean of a slice of integers
-func geoMean(input []int) float64 {
-	var p float64
-	for _, n := range input {
-		if n == 0 {
-			n = 1
-		}
-		if p == 0 {
-			p = float64(n)
-		} else {
-			p *= float64(n)
-		}
+// Return the geometric mean of a slice of integers
+func geoMean(nums []int) (float64, error) {
+	if len(nums) == 0 {
+		return 0, fmt.Errorf("the input slice is empty")
 	}
-	return math.Pow(p, 1/float64(len(input)))
+
+	sumLog := 0.0
+	for _, num := range nums {
+		if num <= 0 {
+			return 0, fmt.Errorf("non-positive numbers are not allowed")
+		}
+		sumLog += math.Log(float64(num))
+	}
+
+	return math.Exp(sumLog / float64(len(nums))), nil
 }

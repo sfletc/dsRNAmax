@@ -223,21 +223,36 @@ func Test_geoMean(t *testing.T) {
 		input []int
 	}
 	tests := []struct {
-		name string
-		args args
-		want float64
+		name    string
+		args    args
+		want    float64
+		wantErr bool
 	}{
 		{
 			name: "geoMeanSuccess",
 			args: args{
+				input: []int{1, 2, 4},
+			},
+			want:    math.Pow(8, 1.0/3),
+			wantErr: false,
+		},
+		{
+			name: "geoMeanError",
+			args: args{
 				input: []int{0, 2, 4},
 			},
-			want: math.Pow(8, 1.0/3),
+			want:    0,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := geoMean(tt.args.input); got != tt.want {
+			got, err := geoMean(tt.args.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("geoMean() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
 				t.Errorf("geoMean() = %v, want %v", got, tt.want)
 			}
 		})

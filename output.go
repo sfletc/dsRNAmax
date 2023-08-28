@@ -10,17 +10,26 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-//Output results to commandline for each input sequence and the dsRNA sense arm itself
+// Output results to commandline for each input sequence and the dsRNA sense arm itself
 func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef) {
 	fmt.Println("\nResults:")
-	modKmerHits := outputTable(goodKmers, kmerLength, selConstruct, ref)
-	fmt.Println("\nGeometric mean of kmer hits to each target sequence:", geoMean(modKmerHits))
+	modKmerHits := outputTable(goodKmers, kmerLength, selConstruct, ref) // Assuming outputTable returns a []int
+
+	// Calculate and output the geometric mean
+	mean, err := geoMean(modKmerHits)
+	if err != nil {
+		fmt.Println("Error calculating geometric mean:", err)
+	} else {
+		fmt.Println("\nGeometric mean of kmer hits to each target sequence:", mean)
+	}
+
+	// Other output information
 	fmt.Println("\ndsRNA sense-arm sequence - " + strconv.FormatFloat(gcContent(selConstruct.seq), 'f', 1, 64) + "% GC content")
 	fmt.Println(selConstruct.seq)
 	fmt.Println("")
 }
 
-//Generate table
+// Generate table
 func outputTable(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef) []int {
 	kmerLenStr := strconv.Itoa(*kmerLength)
 	kmers := kmersPerInput(goodKmers, selConstruct.seq, *kmerLength, len(ref))
@@ -40,8 +49,8 @@ func outputTable(goodKmers map[string][]int, kmerLength *int, selConstruct *cons
 	return modKmerHits
 }
 
-//Returns the kmers that match each input sequence
-//Use only after the best constrcut has been returned
+// Returns the kmers that match each input sequence
+// Use only after the best constrcut has been returned
 func kmersPerInput(goodKmers map[string][]int, bestConstruct string, kmerLen int, headerNo int) [][]string {
 	kmersForInput := make([][]string, headerNo)
 	for i := 0; i < len(bestConstruct)-kmerLen+1; i++ {
@@ -114,7 +123,7 @@ func meanGCforKmers(kmersForInput [][]string) []float64 {
 	return meanGC
 }
 
-//Return GC content of a kmer expressed as a percentage
+// Return GC content of a kmer expressed as a percentage
 func gcContent(kmer string) float64 {
 	gc := 0.0
 	for _, nuc := range kmer {

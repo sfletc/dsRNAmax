@@ -8,8 +8,7 @@ import (
 	"os"
 )
 
-var Version = "1.0.1"
-
+var Version = "1.0.2"
 
 func errorShutdown() {
 	fmt.Println("\nExiting program")
@@ -39,14 +38,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(*refFile)
+	fmt.Println("Target FASTA File:\t", *refFile)
+	if *otRefFile != "" {
+		fmt.Println("Off-target FASTA File:\t", *otRefFile)
+	}
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {
 		ref, err = biasMod(ref, *biasHeader, *biasLvl)
 		if err != nil {
 			log.Fatal(err)
-		} 
+		}
 	}
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)

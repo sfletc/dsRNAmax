@@ -66,9 +66,9 @@ func kmersPerInput(goodKmers map[string][]int, bestConstruct string, kmerLen int
 
 func kmerStats(kmersPerInput [][]string) [][]float64 {
 	var results [][]float64
-	result := []float64{0, 0, 0}
+	// result := []float64{0, 0, 0}
 	for _, kmers := range kmersPerInput {
-		result = []float64{0, 0, 0}
+		result := []float64{0, 0, 0}
 		for _, kmer := range kmers {
 			switch kmer[len(kmer)-1:] {
 			case "A":

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -30,6 +31,36 @@ func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	return kmers
 }
 
+func otRemoval(goodKmers map[string][]int, kmerLength int, otRefFiles string) map[string][]int {
+	files := strings.Split(otRefFiles, ",")
+	for _, otRefFile := range files {
+		otRef := RefLoad(otRefFile)
+		otKmers := conGetOTKmers(goodKmers, otRef, kmerLength)
+		goodKmers = removeOTKmers(goodKmers, otKmers)
+	}
+	return goodKmers
+}
+
+func otShortRemoval(goodKmers map[string][]int, otConstructKmers map[string][]int, kmerLength int, otRefFiles string) map[string][]int {
+	files := strings.Split(otRefFiles, ",")
+	for _, otRefFile := range files {
+		otRef := RefLoad(otRefFile)
+		otKmers := conGetOTKmers(otConstructKmers, otRef, kmerLength)
+		mapShortToLongKmer(otKmers, goodKmers)
+	}
+	return goodKmers
+}
+
+func mapShortToLongKmer(otKmers map[string]bool, goodKmers map[string][]int) {
+	for ok := range otKmers {
+		for gk := range goodKmers {
+			if strings.Contains(gk, ok) {
+				delete(goodKmers, gk)
+			}
+		}
+	}
+}
+
 // Identifies off-target kmers present in the off-target (either orientation) set
 // This is done concurrently to improve speed
 func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[string]bool {
@@ -53,14 +84,14 @@ func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[
 	return allOTKmers
 }
 
-func otRemoval(otRefFile *string, goodKmers map[string][]int, kmerLength *int) map[string][]int {
+// func otRemoval(otRefFile *string, goodKmers map[string][]int, kmerLength *int) map[string][]int {
 
-	otRef := RefLoad(*otRefFile)
-	otKmers := conGetOTKmers(goodKmers, otRef, *kmerLength)
-	otRef = nil
-	goodKmers = removeOTKmers(goodKmers, otKmers)
-	return goodKmers
-}
+// 	otRef := RefLoad(*otRefFile)
+// 	otKmers := conGetOTKmers(goodKmers, otRef, *kmerLength)
+// 	otRef = nil
+// 	goodKmers = removeOTKmers(goodKmers, otKmers)
+// 	return goodKmers
+// }
 
 // Concurrent worker function.  Takes an off-target HeaderRef from the queue
 // and adds checks if derived kmers are in the target kmer pool.  If so,

@@ -8,39 +8,41 @@ import (
 	"os"
 )
 
-var Version = "1.0.2"
+var Version = "1.0.3"
 
 func errorShutdown() {
 	fmt.Println("\nExiting program")
 	os.Exit(1)
 }
 
-func clInput() (*string, *string, *int, *int, *int, *string, *int, error) {
+func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, error) {
 	refFile := flag.String("targets", "", "Path to target FASTA file (required)")
-	otRefFile := flag.String("offTargets", "", "Path to off-target FASTA file")
+	otRefFiles := flag.String("offTargets", "", "Comma-separated list of off-target FASTA file/s")
 	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
+	otKmerLength := flag.Int("otKmerLen", *kmerLength, "Off-target Kmer length (must be <= kmer length)")
 	consLength := flag.Int("constructLen", 300, "dsRNA sense arm length")
 	iterations := flag.Int("iterations", 100, "No. of iterations")
 	biasHeader := flag.String("biasHeader", "", "Header of target sequence to bias toward")
 	biasLvl := flag.Int("biasLvl", 0, "Level of bias to apply")
 	flag.Parse()
 	if *refFile == "" {
-		return refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, errors.New("error: no target FASTA file was specificed")
+		return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, errors.New("error: no target FASTA file was specificed")
 	}
-	return refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, nil
+	return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, nil
 }
 
 func main() {
 	fmt.Println("\ndsRNAmax - dsRNA maximizer")
 	fmt.Println("Version:\t", Version)
 	fmt.Println("")
-	refFile, otRefFile, kmerLength, consLength, iterations, biasHeader, biasLvl, err := clInput()
+	refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, err := clInput()
 	if err != nil {
 		log.Fatal(err)
 	}
+	//TODO: check if otKmer length <= kmerLength
 	fmt.Println("Target FASTA File:\t", *refFile)
-	if *otRefFile != "" {
-		fmt.Println("Off-target FASTA File:\t", *otRefFile)
+	if *otRefFiles != "" {
+		fmt.Println("Off-target FASTA File:\t", *otRefFiles)
 	}
 	fmt.Println("Loading target sequences")
 	ref := RefLoad(*refFile)
@@ -52,10 +54,18 @@ func main() {
 	}
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)
-	if *otRefFile != "" {
-		fmt.Println("Loading and removing off-target sequences")
-		goodKmers = otRemoval(otRefFile, goodKmers, kmerLength)
+	if *otRefFiles != "" {
+		if *otKmerLength < *kmerLength {
+			otConstructKmers := getKmers(ref, *otKmerLength)
+			goodKmers = otShortRemoval(goodKmers, otConstructKmers, *otKmerLength, *otRefFiles)
+		} else {
+			goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
+		}
 	}
+	// if *otRefFiles != "" {
+	// 	fmt.Println("Loading and removing off-target sequences")
+	// 	goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
+	// }
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)
 	fmt.Println("Finding best construct")

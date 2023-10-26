@@ -46,8 +46,8 @@ func workerBC(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, s
 		kmerCtsCpy[k] = v
 		kmerSeq = append(kmerSeq, k)
 	}
-	rand.Seed(time.Now().UnixNano())
-	randomIndex := rand.Intn(len(kmerSeq))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomIndex := r.Intn(len(kmerSeq))
 	initKmer := kmerSeq[randomIndex]
 	fcons := buildf(kmerCtsCpy, initKmer, kmerLen)
 	bcons := buildr(kmerCtsCpy, fcons, kmerLen)

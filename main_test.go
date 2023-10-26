@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math"
 	"reflect"
 	"testing"
 )
@@ -233,7 +232,7 @@ func Test_geoMean(t *testing.T) {
 			args: args{
 				input: []int{1, 2, 4},
 			},
-			want:    math.Pow(8, 1.0/3),
+			want:    2,
 			wantErr: false,
 		},
 		{
@@ -256,5 +255,22 @@ func Test_geoMean(t *testing.T) {
 				t.Errorf("geoMean() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_mapShortToLongKmer(t *testing.T) {
+	// Define the input arguments
+	otKmers := map[string]bool{"ATCG": true, "GCTA": true}
+	goodKmers := map[string][]int{"ATCG": {1, 2, 3}, "GCTA": {4, 5, 6}, "CGTA": {7, 8, 9}}
+
+	// Call the function to be tested
+	mapShortToLongKmer(otKmers, goodKmers)
+
+	// Define the expected output
+	expectedOutput := map[string][]int{"CGTA": {7, 8, 9}}
+
+	// Check if the output matches the expected output
+	if !reflect.DeepEqual(goodKmers, expectedOutput) {
+		t.Errorf("Test_mapShortToLongKmer failed: expected %v but got %v", expectedOutput, goodKmers)
 	}
 }

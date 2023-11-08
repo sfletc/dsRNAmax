@@ -31,8 +31,11 @@
 package main
 
 import (
-	"strings"
-	"sync"
+	"bufio"   // For reading files with a scanner
+	"fmt"     // For printing to the console
+	"os"      // For opening and closing files
+	"strings" // For string manipulation like HasPrefix
+	"sync"    // For using WaitGroup and Mutex
 )
 
 // Identify all unique kmers in provided sense strand sequences
@@ -166,4 +169,107 @@ func kmerAbun(kmers map[string][]int) map[string]int {
 		kmerCts[k] = tot
 	}
 	return kmerCts
+}
+
+func LoadAndSendSeqs(refFile string, seqChan chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	f, err := os.Open(refFile)
+	if err != nil {
+		fmt.Println("Problem opening fasta reference file", refFile)
+		return // or handle error as needed
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	var refSeq strings.Builder
+
+	for scanner.Scan() {
+		fastaLine := scanner.Text()
+		if strings.HasPrefix(fastaLine, ">") {
+			if refSeq.Len() > 0 {
+				seqChan <- refSeq.String()
+				refSeq.Reset()
+			}
+		} else if len(fastaLine) > 0 {
+			refSeq.WriteString(strings.ToUpper(fastaLine))
+		}
+	}
+
+	// Send the last sequence if there is one
+	if refSeq.Len() > 0 {
+		seqChan <- refSeq.String()
+	}
+}
+
+// TODO: setup for smaller OT kmers
+func KmerCheckSeqs(seqChan <-chan string, goodKmers map[string][]int, kmerLen int, wg *sync.WaitGroup, toDeleteChan chan<- map[string]struct{}) {
+	defer wg.Done()
+
+	toDelete := make(map[string]struct{}) // Temporary set to store k-mers to delete
+
+	for seq := range seqChan {
+		// Compute the reverse complement of the entire sequence once
+		rcSeq := reverseComplement(seq)
+
+		// Iterate over the original sequence and the reverse complement
+		for _, s := range []string{seq, rcSeq} {
+			for pos := 0; pos <= len(s)-kmerLen; pos++ {
+				kmer := s[pos : pos+kmerLen]
+				// Check if the k-mer is in goodKmers
+				if _, exists := goodKmers[kmer]; exists {
+					toDelete[kmer] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// Send the toDelete map to the channel
+	toDeleteChan <- toDelete
+}
+
+func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int, kmerLen int) {
+	seqChan := make(chan string, 100)                  // Buffered channel for better performance
+	toDeleteChan := make(chan map[string]struct{}, 20) // Channel to collect toDelete maps from workers
+
+	var producerWG sync.WaitGroup // WaitGroup for producers
+	var consumerWG sync.WaitGroup // WaitGroup for consumers
+
+	// Set up sequence producers
+	for _, refFile := range refFiles {
+		producerWG.Add(1)
+		go LoadAndSendSeqs(refFile, seqChan, &producerWG)
+	}
+
+	// Close the sequence channel once all producers are done
+	go func() {
+		producerWG.Wait()
+		close(seqChan)
+	}()
+
+	// Set up sequence consumers
+	numConsumers := 20 // Set the number of workers as needed.
+	for i := 0; i < numConsumers; i++ {
+		consumerWG.Add(1)
+		go KmerCheckSeqs(seqChan, goodKmers, kmerLen, &consumerWG, toDeleteChan)
+	}
+
+	// Wait for all consumers to finish processing
+	consumerWG.Wait()
+	close(toDeleteChan) // Close the toDelete channel once all consumers are done
+
+	// Collect toDelete maps, count and delete the kmers from goodKmers after ensuring all consumers are done
+	deletedKmerCount := 0
+	for toDelete := range toDeleteChan {
+		for kmer := range toDelete {
+			if _, exists := goodKmers[kmer]; exists {
+				deletedKmerCount++      // Increment the counter if the kmer is found in goodKmers
+				delete(goodKmers, kmer) // Delete the kmer from goodKmers
+			}
+		}
+	}
+
+	// Print the count of deleted kmers
+	fmt.Printf("Total off-target kmers deleted: %d\n", deletedKmerCount)
+
 }

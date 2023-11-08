@@ -1,7 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -309,5 +313,189 @@ func TestRemoveMappedLongOTKmers(t *testing.T) {
 				t.Errorf("removeMappedLongOTKmers() got = %v, want %v", tt.goodKmers, tt.expected)
 			}
 		})
+	}
+}
+
+// TestLoadAndSendSeqs tests the LoadAndSendSeqs function to ensure it sends the correct sequences.
+func TestLoadAndSendSeqs(t *testing.T) {
+	// Create a temporary file to simulate the fasta file input
+	tmpFile, err := os.CreateTemp("", "example.*.fasta")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name()) // clean up after the test
+
+	// Write example fasta content to the temp file
+	_, err = tmpFile.WriteString(">seq1\nATGC\n>seq2\nCGTA")
+	if err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+	tmpFile.Sync() // Ensure the file is written and available for reading
+	tmpFile.Close()
+
+	// Set up the channel and waitgroup
+	seqChan := make(chan string) // unbuffered channel
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Invoke LoadAndSendSeqs in a goroutine
+	go LoadAndSendSeqs(tmpFile.Name(), seqChan, &wg)
+
+	// Prepare a set to track received sequences
+	receivedSeqs := make(map[string]struct{})
+
+	// Start another goroutine to close the channel once all sequences are processed
+	go func() {
+		wg.Wait()
+		close(seqChan)
+	}()
+
+	// Collect sequences from the channel
+	for seq := range seqChan {
+		receivedSeqs[seq] = struct{}{}
+	}
+
+	// Define the expected sequences as a set
+	expectedSeqs := map[string]struct{}{
+		"ATGC": {},
+		"CGTA": {},
+	}
+
+	// Check that each expected sequence is in the received set
+	for seq := range expectedSeqs {
+		if _, ok := receivedSeqs[seq]; !ok {
+			t.Errorf("Expected sequence %s not found", seq)
+		}
+	}
+
+	// Check for any unexpected sequences
+	for seq := range receivedSeqs {
+		if _, ok := expectedSeqs[seq]; !ok {
+			t.Errorf("Unexpected sequence %s received", seq)
+		}
+	}
+}
+
+// mock data for testing
+
+// Mock LoadAndSendSeqs to preload sequences instead of reading from a file
+func MockLoadAndSendSeqs(preloadedSequences []string, seqChan chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for _, seq := range preloadedSequences {
+		seqChan <- seq
+	}
+}
+
+// Create a temporary file with the given sequences and return its path
+func createTempFastaFile(sequences []string, t *testing.T) string {
+	content := strings.Join(sequences, "\n")
+	tmpfile, err := os.CreateTemp("", "example.*.fasta")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %s", err)
+	}
+	if _, err := tmpfile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write to temp file: %s", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %s", err)
+	}
+	return tmpfile.Name()
+}
+
+func TestKmerCheckSeqs(t *testing.T) {
+	seqChan := make(chan string, 10)                   // Buffered for sending test sequences without blocking.
+	toDeleteChan := make(chan map[string]struct{}, 10) // Buffered to receive toDelete maps without blocking.
+	wg := &sync.WaitGroup{}
+
+	// Define the goodKmers map with example data.
+	goodKmers := map[string][]int{
+		"ATGC": {1},
+		"GCAT": {1}, // reverse complement of ATGC
+		"CGTA": {1},
+		"TTTT": {1},
+	}
+
+	// Define the input sequences containing the kmers.
+	inputSequences := []string{
+		"ATGCATAAA", // contains ATGC (which has a reverse complement in the map)
+		"TAGCATT",   // does not contain any kmers from the map
+		"ACGTAC",    // contains CGTA (which is in the map)
+		"GCATGC",    // contains GCAT (which is the reverse complement of ATGC in the map)
+	}
+
+	// Start the KmerCheckSeqs in a separate goroutine.
+	wg.Add(1)
+	go KmerCheckSeqs(seqChan, goodKmers, 4, wg, toDeleteChan)
+
+	// Send the sequences to the channel and close it.
+	for _, seq := range inputSequences {
+		seqChan <- seq
+	}
+	close(seqChan)
+
+	// Wait for KmerCheckSeqs to finish processing.
+	wg.Wait()
+	close(toDeleteChan) // Close the toDeleteChan channel after all workers are done.
+
+	// Process the toDelete maps and update the goodKmers map accordingly.
+	for toDelete := range toDeleteChan {
+		for kmer := range toDelete {
+			delete(goodKmers, kmer)
+		}
+	}
+
+	// Define the expected results.
+	expectedGoodKmers := map[string][]int{
+		"TTTT": {1}, // Assuming this is a kmer that should remain.
+	}
+	fmt.Println(goodKmers)
+	// Check if the goodKmers map has been updated correctly.
+	if len(goodKmers) != len(expectedGoodKmers) {
+		t.Errorf("KmerCheckSeqs failed: expected %d good kmers, got %d", len(expectedGoodKmers), len(goodKmers))
+	}
+
+	for kmer, count := range expectedGoodKmers {
+		if actualCount, exists := goodKmers[kmer]; !exists || actualCount[0] != count[0] {
+			t.Errorf("KmerCheckSeqs failed: kmer '%s' was not processed correctly", kmer)
+		}
+	}
+}
+
+// TestConcurrentlyProcessSequences tests the ConcurrentlyProcessSequences function
+func TestConcurrentlyProcessSequences(t *testing.T) {
+	// Arrange
+	refSequences := []string{
+		">seq1",
+		"ATCGATCGATCG",
+		">seq2",
+		"GCTAGCTAGCTA",
+	}
+	refFile := createTempFastaFile(refSequences, t)
+	defer os.Remove(refFile) // clean up
+
+	goodKmers := map[string][]int{
+		"ATCG": {1},
+		"GCTA": {1},
+	}
+
+	kmerLen := 4
+
+	// Act
+	ConcurrentlyProcessSequences([]string{refFile}, goodKmers, kmerLen)
+
+	// Assert
+	expectedRemainingKmers := map[string][]int{
+		// Based on the logic, these k-mers should have been deleted
+		// if they were present in the input sequences.
+	}
+
+	if len(goodKmers) != len(expectedRemainingKmers) {
+		t.Errorf("got %d goodKmers; want %d", len(goodKmers), len(expectedRemainingKmers))
+	}
+
+	for kmer := range expectedRemainingKmers {
+		if _, exists := goodKmers[kmer]; !exists {
+			t.Errorf("expected kmer %s to be present; it was not", kmer)
+		}
 	}
 }

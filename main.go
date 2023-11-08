@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 var Version = "1.0.3"
@@ -56,11 +57,13 @@ func main() {
 	goodKmers := getKmers(ref, *kmerLength)
 	if *otRefFiles != "" {
 		fmt.Println("Loading and removing off-target sequences")
-		if *otKmerLength < *kmerLength {
-			goodKmers = otShortRemoval(goodKmers, *otKmerLength, *otRefFiles)
-		} else {
-			goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
-		}
+		// if *otKmerLength < *kmerLength {
+		// 	goodKmers = otShortRemoval(goodKmers, *otKmerLength, *otRefFiles)
+		// } else {
+		// 	goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
+		// }
+		files := strings.Split(*otRefFiles, ",")
+		ConcurrentlyProcessSequences(files, goodKmers, *otKmerLength)
 	}
 
 	fmt.Println("Counting kmers")

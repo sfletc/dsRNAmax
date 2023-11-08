@@ -55,17 +55,14 @@ func main() {
 	fmt.Println("Getting target sequence kmers")
 	goodKmers := getKmers(ref, *kmerLength)
 	if *otRefFiles != "" {
+		fmt.Println("Loading and removing off-target sequences")
 		if *otKmerLength < *kmerLength {
-			otConstructKmers := getKmers(ref, *otKmerLength)
-			goodKmers = otShortRemoval(goodKmers, otConstructKmers, *otKmerLength, *otRefFiles)
+			goodKmers = otShortRemoval(goodKmers, *otKmerLength, *otRefFiles)
 		} else {
 			goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
 		}
 	}
-	// if *otRefFiles != "" {
-	// 	fmt.Println("Loading and removing off-target sequences")
-	// 	goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
-	// }
+
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)
 	fmt.Println("Finding best construct")

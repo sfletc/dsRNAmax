@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -14,6 +15,34 @@ var Version = "1.0.3"
 func errorShutdown() {
 	fmt.Println("\nExiting program")
 	os.Exit(1)
+}
+
+// reverseSlice reverses a slice of strings. Needed for the intWithCommas function.
+func reverseSlice(s []string) []string {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
+
+// intWithCommas converts an integer to a comma-separated string.
+func intWithCommas(i int) string {
+	in := strconv.Itoa(i) // Convert int to string
+	out := make([]string, 0, len(in)/3+1)
+
+	// Loop through the string, inserting commas every three digits.
+	for len(in) > 3 {
+		threeDigits := in[len(in)-3:]
+		out = append(out, threeDigits)
+		in = in[:len(in)-3]
+	}
+	out = append(out, in)
+
+	// Since we built the out slice from right to left, reverse it.
+	out = reverseSlice(out)
+
+	// Join the slice back into a single string.
+	return strings.Join(out, ",")
 }
 
 func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, error) {
@@ -45,7 +74,7 @@ func main() {
 	if *otRefFiles != "" {
 		fmt.Println("Off-target FASTA File:\t", *otRefFiles)
 	}
-	fmt.Println("Loading target sequences")
+	fmt.Println("\nLoading target sequences")
 	ref := RefLoad(*refFile)
 	if *biasHeader != "" {
 		ref, err = biasMod(ref, *biasHeader, *biasLvl)
@@ -53,10 +82,11 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println("Getting target sequence kmers")
+	fmt.Printf("Getting target sequence kmers\n\n")
 	goodKmers := getKmers(ref, *kmerLength)
+	fmt.Printf("%s target kmers loaded\n\n", intWithCommas(len(goodKmers)))
 	if *otRefFiles != "" {
-		fmt.Println("Loading and removing off-target sequences")
+		fmt.Printf("Removing off-target kmers\n\n")
 		// if *otKmerLength < *kmerLength {
 		// 	goodKmers = otShortRemoval(goodKmers, *otKmerLength, *otRefFiles)
 		// } else {

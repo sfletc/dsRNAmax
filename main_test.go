@@ -479,9 +479,10 @@ func TestConcurrentlyProcessSequences(t *testing.T) {
 	}
 
 	kmerLen := 4
+	otKmerLen := 4
 
 	// Act
-	ConcurrentlyProcessSequences([]string{refFile}, goodKmers, kmerLen)
+	ConcurrentlyProcessSequences([]string{refFile}, goodKmers, kmerLen, otKmerLen)
 
 	// Assert
 	expectedRemainingKmers := map[string][]int{
@@ -497,5 +498,42 @@ func TestConcurrentlyProcessSequences(t *testing.T) {
 		if _, exists := goodKmers[kmer]; !exists {
 			t.Errorf("expected kmer %s to be present; it was not", kmer)
 		}
+	}
+}
+
+// TestGenerateSubKmersMap provides test cases for the GenerateSubKmersMap function.
+func TestGenerateSubKmersMap(t *testing.T) {
+	tests := []struct {
+		name       string
+		goodKmers  map[string][]int // Assuming the type should be map[string]struct{} as per original function
+		subKmerLen int
+		want       map[string][]string
+	}{
+		{
+			name: "single k-mer",
+			goodKmers: map[string][]int{
+				"ACGTACGTACGT": {1}}, // Corrected here
+			subKmerLen: 10,
+			want: map[string][]string{
+				"ACGTACGTAC": {"ACGTACGTACGT"},
+				"CGTACGTACG": {"ACGTACGTACGT"},
+				"GTACGTACGT": {"ACGTACGTACGT"},
+			},
+		},
+		{
+			name: "subKmerLen longer than k-mer",
+			goodKmers: map[string][]int{
+				"ACGT": {1}}, // Assuming this is the intended type
+			subKmerLen: 5,
+			want:       map[string][]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GenerateSubKmersMap(tt.goodKmers, tt.subKmerLen); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GenerateSubKmersMap() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

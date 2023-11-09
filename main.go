@@ -93,7 +93,7 @@ func main() {
 		// 	goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
 		// }
 		files := strings.Split(*otRefFiles, ",")
-		ConcurrentlyProcessSequences(files, goodKmers, *otKmerLength)
+		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
 	}
 
 	fmt.Println("Counting kmers")

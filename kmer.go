@@ -228,10 +228,56 @@ func KmerCheckSeqs(seqChan <-chan string, goodKmers map[string][]int, kmerLen in
 	toDeleteChan <- toDelete
 }
 
-func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int, kmerLen int) {
-	seqChan := make(chan string, 100)                  // Buffered channel for better performance
-	toDeleteChan := make(chan map[string]struct{}, 20) // Channel to collect toDelete maps from workers
+func smallKmerCheckSeqs(seqChan <-chan string, subKmers map[string][]string, kmerLen int, subKmerLen int, wg *sync.WaitGroup, toDeleteChan chan map[string][]string) {
+	defer wg.Done()
 
+	toDelete := make(map[string][]string) // Temporary set to store k-mers to delete
+
+	for seq := range seqChan {
+		// Compute the reverse complement of the entire sequence once
+		rcSeq := reverseComplement(seq)
+
+		// Iterate over the original sequence and the reverse complement
+		for _, s := range []string{seq, rcSeq} {
+			for pos := 0; pos <= len(s)-subKmerLen; pos++ {
+				kmer := s[pos : pos+subKmerLen]
+				// Check if the k-mer is in goodKmers
+				if _, exists := subKmers[kmer]; exists {
+					toDelete[kmer] = subKmers[kmer]
+				}
+			}
+		}
+	}
+
+	// Send the toDelete map to the channel
+	toDeleteChan <- toDelete
+}
+
+func GenerateSubKmersMap(goodKmers map[string][]int, subKmerLen int) map[string][]string {
+	subKmers := make(map[string][]string)
+
+	// Iterate through all k-mers in the input map
+	for kmer := range goodKmers {
+		if len(kmer) < subKmerLen || subKmerLen == 0 { //TODO: prob should throw an error
+			return subKmers
+		}
+		// Generate all possible substrings of the specified length from the kmer
+		for i := 0; i <= len(kmer)-subKmerLen; i++ {
+			subKmer := kmer[i : i+subKmerLen]
+
+			// Append the original kmer to the list of kmers that contain this subKmer
+			subKmers[subKmer] = append(subKmers[subKmer], kmer)
+		}
+	}
+
+	return subKmers
+}
+
+func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int, kmerLen int, subKmerLen int) {
+	seqChan := make(chan string, 100)                         // Buffered channel for better performance
+	toDeleteChan := make(chan map[string]struct{}, 20)        // Channel to collect toDelete maps from workers
+	toDeleteSubKmerChan := make(chan map[string][]string, 20) // Channel to collect toDelete maps from workers
+	var subKmers map[string][]string
 	var producerWG sync.WaitGroup // WaitGroup for producers
 	var consumerWG sync.WaitGroup // WaitGroup for consumers
 
@@ -246,30 +292,51 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 		producerWG.Wait()
 		close(seqChan)
 	}()
+	if subKmerLen < kmerLen {
 
+		subKmers = GenerateSubKmersMap(goodKmers, subKmerLen)
+	}
 	// Set up sequence consumers
 	numConsumers := 20 // Set the number of workers as needed.
 	for i := 0; i < numConsumers; i++ {
 		consumerWG.Add(1)
-		go KmerCheckSeqs(seqChan, goodKmers, kmerLen, &consumerWG, toDeleteChan)
+		if subKmerLen == kmerLen {
+			go KmerCheckSeqs(seqChan, goodKmers, kmerLen, &consumerWG, toDeleteChan)
+		} else {
+			go smallKmerCheckSeqs(seqChan, subKmers, kmerLen, subKmerLen, &consumerWG, toDeleteSubKmerChan)
+		}
 	}
 
 	// Wait for all consumers to finish processing
 	consumerWG.Wait()
-	close(toDeleteChan) // Close the toDelete channel once all consumers are done
 
 	// Collect toDelete maps, count and delete the kmers from goodKmers after ensuring all consumers are done
-	deletedKmerCount := 0
-	for toDelete := range toDeleteChan {
-		for kmer := range toDelete {
-			if _, exists := goodKmers[kmer]; exists {
-				deletedKmerCount++      // Increment the counter if the kmer is found in goodKmers
-				delete(goodKmers, kmer) // Delete the kmer from goodKmers
+	if subKmerLen == kmerLen {
+		close(toDeleteChan) // Close the toDelete channel once all consumers are done
+		deletedKmerCount := 0
+		for toDelete := range toDeleteChan {
+			for kmer := range toDelete {
+				if _, exists := goodKmers[kmer]; exists {
+					deletedKmerCount++      // Increment the counter if the kmer is found in goodKmers
+					delete(goodKmers, kmer) // Delete the kmer from goodKmers
+				}
 			}
 		}
-	}
+		fmt.Printf("Total off-target kmers deleted: %d\n", deletedKmerCount)
+	} else {
+		close(toDeleteSubKmerChan) // Close the toDelete channel once all consumers are done
+		deletedKmerCount := 0
+		for toDelete := range toDeleteSubKmerChan {
+			for _, longKmers := range toDelete {
+				for _, longKmer := range longKmers {
+					if _, exists := goodKmers[longKmer]; exists {
+						deletedKmerCount++          // Increment the counter if the kmer is found in goodKmers
+						delete(goodKmers, longKmer) // Delete the kmer from goodKmers
+					}
+				}
+			}
+		}
 
-	// Print the count of deleted kmers
-	fmt.Printf("Total off-target kmers deleted: %d\n", deletedKmerCount)
+	}
 
 }

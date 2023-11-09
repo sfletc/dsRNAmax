@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,11 +11,19 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-// Output results to commandline for each input sequence and the dsRNA sense arm itself
-func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef) {
+// Output results to commandline and a CSV file for each input sequence and the dsRNA sense arm itself
+func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef, csvFileName string) {
 	fmt.Println("\nResults:")
-	modKmerHits := outputTable(goodKmers, kmerLength, selConstruct, ref) // Assuming outputTable returns a []int
+	modKmerHits, rowData := outputTable(goodKmers, kmerLength, selConstruct, ref) // outputTable will now also return rowData for CSV
 
+	if csvFileName != "" {
+		err := writeToCSV(csvFileName, rowData, selConstruct.seq)
+		if err != nil {
+			fmt.Println("Error writing to CSV:", err)
+			return
+		}
+		fmt.Println("Results written to", csvFileName)
+	}
 	// Calculate and output the geometric mean
 	mean, err := geoMean(modKmerHits)
 	if err != nil {
@@ -29,24 +38,62 @@ func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *co
 	fmt.Println("")
 }
 
-// Generate table
-func outputTable(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef) []int {
+func writeToCSV(filename string, data [][]string, seq string) error {
+	// Create a new CSV file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Initialize the CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write all data to the CSV file
+	for _, row := range data {
+		if err := writer.Write(row); err != nil {
+			return err // returns early if there is an error
+		}
+	}
+
+	// Write an empty row to create a space after the table
+	if err := writer.Write([]string{}); err != nil {
+		return err // returns early if there is an error
+	}
+
+	// Write the "seq" label in a cell by itself
+	if err := writer.Write([]string{"dsRNA sense-arm sequence:"}); err != nil {
+		return err // returns early if there is an error
+	}
+
+	// Write the sequence on the next line
+	if err := writer.Write([]string{seq}); err != nil {
+		return err // returns early if there is an error
+	}
+
+	return nil // returns nil if everything was written successfully
+}
+
+// Generate table and prepare data for CSV
+func outputTable(goodKmers map[string][]int, kmerLength *int, selConstruct *construct, ref []*HeaderRef) ([]int, [][]string) {
 	kmerLenStr := strconv.Itoa(*kmerLength)
 	kmers := kmersPerInput(goodKmers, selConstruct.seq, *kmerLength, len(ref))
 	meanGC := meanGCforKmers(kmers)
 	kmerStats := kmerStats(kmers)
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Target sequence header",
+	headers := []string{"Target sequence header",
 		kmerLenStr + "nt matches",
 		"SWG similarity (%)",
 		"Kmer mean GC (%)",
 		"5'U (%)",
 		"5'A (%)",
-		"5'C (%)"})
-	modKmerHits := generateRowData(kmerStats, meanGC, selConstruct, ref, table, *kmerLength)
+		"5'C (%)"}
+	table.SetHeader(headers)
+	modKmerHits, csvData := generateRowData(kmerStats, meanGC, selConstruct, ref, table, *kmerLength)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.Render()
-	return modKmerHits
+	return modKmerHits, csvData
 }
 
 // Returns the kmers that match each input sequence
@@ -85,29 +132,65 @@ func kmerStats(kmersPerInput [][]string) [][]float64 {
 	return results
 }
 
-func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *construct, ref []*HeaderRef, table *tablewriter.Table, kmerLength int) []int {
+// generateRowData prepares data for the output table and CSV export
+func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *construct, ref []*HeaderRef, table *tablewriter.Table, kmerLength int) ([]int, [][]string) {
 	headerMap := make(map[string]bool)
 	var modKmerHits []int
+	var csvData [][]string // Initialize slice to hold CSV data rows
+
+	// Initialize the Smith-Waterman-Gotoh algorithm parameters
 	swg := metrics.NewSmithWatermanGotoh()
 	swg.GapPenalty = -2
 	swg.Substitution = metrics.MatchMismatch{
 		Match:    1,
 		Mismatch: -2,
 	}
+
+	// Prepare headers for the CSV output
+	csvHeaders := []string{
+		"Target sequence header",
+		strconv.Itoa(kmerLength) + "nt matches",
+		"SWG similarity (%)",
+		"Kmer mean GC (%)",
+		"5'U (%)",
+		"5'A (%)",
+		"5'C (%)",
+	}
+	csvData = append(csvData, csvHeaders) // Append headers to the CSV data slice
+
+	// Iterate over each target sequence to prepare data for output and CSV
 	for i, j := range selConstruct.kmerHits {
 		if _, ok := headerMap[ref[i].Header]; !ok {
-			table.Append([]string{ref[i].Header, strconv.Itoa(j),
+			// Prepare row data for the terminal table output
+			tableRow := []string{
+				ref[i].Header,
+				strconv.Itoa(j),
 				strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg)*100, 'f', 1, 64),
 				strconv.FormatFloat(meanGC[i], 'f', 1, 64),
 				strconv.FormatFloat(kmerStats[i][0]*100, 'f', 1, 64),
 				strconv.FormatFloat(kmerStats[i][1]*100, 'f', 1, 64),
 				strconv.FormatFloat(kmerStats[i][2]*100, 'f', 1, 64),
-			})
-			modKmerHits = append(modKmerHits, j)
-			headerMap[ref[i].Header] = true
+			}
+			table.Append(tableRow) // Append row data to the terminal table
+
+			// Prepare row data for CSV output
+			csvRow := []string{
+				ref[i].Header,
+				strconv.Itoa(j),
+				strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg)*100, 'f', 1, 64),
+				strconv.FormatFloat(meanGC[i], 'f', 1, 64),
+				strconv.FormatFloat(kmerStats[i][0]*100, 'f', 1, 64),
+				strconv.FormatFloat(kmerStats[i][1]*100, 'f', 1, 64),
+				strconv.FormatFloat(kmerStats[i][2]*100, 'f', 1, 64),
+			}
+			csvData = append(csvData, csvRow) // Append row data to the CSV data slice
+
+			modKmerHits = append(modKmerHits, j) // Collect modified kmer hit counts
+			headerMap[ref[i].Header] = true      // Mark header as processed
 		}
 	}
-	return modKmerHits
+
+	return modKmerHits, csvData // Return the modified kmer hits and the CSV data for export
 }
 
 func meanGCforKmers(kmersForInput [][]string) []float64 {

@@ -45,7 +45,7 @@ func intWithCommas(i int) string {
 	return strings.Join(out, ",")
 }
 
-func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, error) {
+func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, *string, error) {
 	refFile := flag.String("targets", "", "Path to target FASTA file (required)")
 	otRefFiles := flag.String("offTargets", "", "Comma-separated list of off-target FASTA file/s")
 	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
@@ -54,18 +54,19 @@ func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, error) 
 	iterations := flag.Int("iterations", 100, "No. of iterations")
 	biasHeader := flag.String("biasHeader", "", "Header of target sequence to bias toward")
 	biasLvl := flag.Int("biasLvl", 0, "Level of bias to apply")
+	csv := flag.String("csv", "", "CSV file name (optional)")
 	flag.Parse()
 	if *refFile == "" {
-		return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, errors.New("error: no target FASTA file was specificed")
+		return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, errors.New("error: no target FASTA file was specificed")
 	}
-	return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, nil
+	return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, nil
 }
 
 func main() {
 	fmt.Println("\ndsRNAmax - dsRNA maximizer")
 	fmt.Println("Version:\t", Version)
 	fmt.Println("")
-	refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, err := clInput()
+	refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, err := clInput()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,11 +88,6 @@ func main() {
 	fmt.Printf("%s target kmers loaded\n\n", intWithCommas(len(goodKmers)))
 	if *otRefFiles != "" {
 		fmt.Printf("Removing off-target kmers\n\n")
-		// if *otKmerLength < *kmerLength {
-		// 	goodKmers = otShortRemoval(goodKmers, *otKmerLength, *otRefFiles)
-		// } else {
-		// 	goodKmers = otRemoval(goodKmers, *otKmerLength, *otRefFiles)
-		// }
 		files := strings.Split(*otRefFiles, ",")
 		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
 	}
@@ -101,7 +97,7 @@ func main() {
 	fmt.Println("Finding best construct")
 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
 	if selConstruct != nil {
-		outputResults(goodKmers, kmerLength, selConstruct, ref)
+		outputResults(goodKmers, kmerLength, selConstruct, ref, *csv)
 	} else {
 		fmt.Println("Could not identify a dsRNA sense arm sequence.  Check input format and sequence lengths")
 	}

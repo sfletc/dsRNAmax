@@ -222,7 +222,7 @@ func Test_conBestConstruct(t *testing.T) {
 	}
 }
 
-func Test_geoMean(t *testing.T) {
+func Test_mean(t *testing.T) {
 	type args struct {
 		input []int
 	}
@@ -235,15 +235,15 @@ func Test_geoMean(t *testing.T) {
 		{
 			name: "geoMeanSuccess",
 			args: args{
-				input: []int{1, 2, 4},
+				input: []int{1, 2, 3},
 			},
-			want:    2,
+			want:    2.0,
 			wantErr: false,
 		},
 		{
 			name: "geoMeanError",
 			args: args{
-				input: []int{0, 2, 4},
+				input: []int{},
 			},
 			want:    0,
 			wantErr: true,

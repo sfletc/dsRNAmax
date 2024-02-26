@@ -32,8 +32,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -193,7 +191,7 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 			conScores[x] += y
 		}
 	}
-	mean, err := geoMean(conScores)
+	mean, err := mean(conScores)
 	if err == nil {
 		if mean > bestScore {
 			bestScore = mean
@@ -204,19 +202,19 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 	return bestScore, bestPos, bestConScores
 }
 
-// Return the geometric mean of a slice of integers
-func geoMean(nums []int) (float64, error) {
-	if len(nums) == 0 {
-		return 0, fmt.Errorf("the input slice is empty")
+// calculateMean takes a slice of integers and returns their mean as a float64.
+// If the slice is empty, it returns an error.
+func mean(numbers []int) (float64, error) {
+	// Check if the slice is empty
+	if len(numbers) == 0 {
+		return 0, errors.New("slice is empty")
 	}
 
-	sumLog := 0.0
-	for _, num := range nums {
-		if num <= 0 {
-			return 0, fmt.Errorf("non-positive numbers are not allowed")
-		}
-		sumLog += math.Log(float64(num))
+	var sum int
+	for _, num := range numbers {
+		sum += num
 	}
 
-	return math.Exp(sumLog / float64(len(nums))), nil
+	mean := float64(sum) / float64(len(numbers))
+	return mean, nil
 }

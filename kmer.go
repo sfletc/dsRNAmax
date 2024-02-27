@@ -65,23 +65,23 @@ func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	return kmers
 }
 
-func otRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
-	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeOTKmers)
-}
+// func otRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
+// 	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeOTKmers)
+// }
 
-func otShortRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
-	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeMappedLongOTKmers)
-}
+// func otShortRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
+// 	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeMappedLongOTKmers)
+// }
 
-func processOTRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string, removalFunc func(map[string][]int, map[string]struct{})) map[string][]int {
-	files := strings.Split(otRefFiles, ",")
-	for _, otRefFile := range files {
-		otRef := RefLoad(otRefFile)
-		otKmers := conGetOTKmers(goodKmers, otRef, OTkmerLength)
-		removalFunc(goodKmers, otKmers)
-	}
-	return goodKmers
-}
+// func processOTRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string, removalFunc func(map[string][]int, map[string]struct{})) map[string][]int {
+// 	files := strings.Split(otRefFiles, ",")
+// 	for _, otRefFile := range files {
+// 		otRef := RefLoad(otRefFile)
+// 		otKmers := conGetOTKmers(goodKmers, otRef, OTkmerLength)
+// 		removalFunc(goodKmers, otKmers)
+// 	}
+// 	return goodKmers
+// }
 
 func removeOTKmers(goodKmers map[string][]int, otKmers map[string]struct{}) {
 	for key := range otKmers {
@@ -176,7 +176,7 @@ func LoadAndSendSeqs(refFile string, seqChan chan<- string, wg *sync.WaitGroup) 
 
 	f, err := os.Open(refFile)
 	if err != nil {
-		fmt.Println("Problem opening fasta reference file", refFile)
+		fmt.Println("Problem opening FASTA reference file", refFile)
 		return // or handle error as needed
 	}
 	defer f.Close()
@@ -322,7 +322,7 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 				}
 			}
 		}
-		fmt.Printf("Total off-target kmers deleted: %d\n", deletedKmerCount)
+		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", deletedKmerCount)
 	} else {
 		close(toDeleteSubKmerChan) // Close the toDelete channel once all consumers are done
 		deletedKmerCount := 0
@@ -336,6 +336,7 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 				}
 			}
 		}
+		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", deletedKmerCount)
 
 	}
 

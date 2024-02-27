@@ -45,9 +45,10 @@ func intWithCommas(i int) string {
 	return strings.Join(out, ",")
 }
 
-func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, *string, error) {
+func clInput() (*string, *string, *int, *string, *int, *int, *int, *string, *int, *string, error) {
 	refFile := flag.String("targets", "", "Path to target FASTA file (required)")
 	otRefFiles := flag.String("offTargets", "", "Comma-separated list of off-target FASTA file/s")
+	otKmerFile := flag.String("offTargetKmers", "", "Path to off-target kmer file (optional)")
 	kmerLength := flag.Int("kmerLen", 21, "Kmer length")
 	otKmerLength := flag.Int("otKmerLen", *kmerLength, "Off-target Kmer length (must be <= kmer length)")
 	consLength := flag.Int("constructLen", 300, "dsRNA sense arm length")
@@ -57,16 +58,16 @@ func clInput() (*string, *string, *int, *int, *int, *int, *string, *int, *string
 	csv := flag.String("csv", "", "CSV file name (optional)")
 	flag.Parse()
 	if *refFile == "" {
-		return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, errors.New("error: no target FASTA file was specificed")
+		return refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, errors.New("error: no target FASTA file was specificed")
 	}
-	return refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, nil
+	return refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, nil
 }
 
 func main() {
 	fmt.Println("\ndsRNAmax - dsRNA maximizer")
 	fmt.Println("Version:\t", Version)
 	fmt.Println("")
-	refFile, otRefFiles, kmerLength, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, err := clInput()
+	refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, err := clInput()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,11 +87,37 @@ func main() {
 	fmt.Printf("Getting target sequence kmers\n\n")
 	goodKmers := getKmers(ref, *kmerLength)
 	fmt.Printf("%s target kmers loaded\n\n", intWithCommas(len(goodKmers)))
-	if *otRefFiles != "" {
+
+	switch {
+
+	case *otRefFiles != "" && *otKmerFile != "":
+		fmt.Println("Error: both off-target FASTA files and an off-target kmer file specified.  Please specify only one.")
+		errorShutdown()
+	case *otRefFiles != "":
 		fmt.Printf("Removing off-target kmers\n\n")
 		files := strings.Split(*otRefFiles, ",")
 		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
+	case *otKmerFile != "":
+		fmt.Printf("Removing off-target kmers\n\n")
+		removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
 	}
+	// if *otRefFiles != "" {
+	// 	fmt.Printf("Removing off-target kmers\n\n")
+	// 	files := strings.Split(*otRefFiles, ",")
+	// 	ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
+	// }
+	// if *otKmerFile != "" {
+	// 	fmt.Printf("Removing off-target kmers\n\n")
+	// 	goodUint64kmers, err := convertGoodKmersToUint64Set(goodKmers, *kmerLength)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	otKmers, err := removeOffTargetUint64KmersConcurrent(*otKmerFile, goodUint64kmers, *kmerLength, 32)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	removeKmersFromGoodKmers(goodKmers, otKmers)
+	// }
 
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)

@@ -9,13 +9,20 @@ import (
 	"sync"
 )
 
-func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[uint64]struct{}, k int, numWorkers int) (map[string]struct{}, error) {
+func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[uint64]struct{}, numWorkers int) (map[string]struct{}, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
+	//read the first line of the binary file to get the kmer length
+	var k64 uint64
 
+	if err := binary.Read(file, binary.LittleEndian, &k64); err != nil {
+		return nil, fmt.Errorf("error reading kmer length: %v", err)
+	}
+
+	var k int = int(k64)
 	const chunkSize = 1024 * 64 // 64 KB; adjust as needed
 	kmerSize := binary.Size(uint64(0))
 	kmerChan := make(chan []byte, numWorkers)
@@ -138,21 +145,21 @@ func min(a, b uint64) uint64 {
 	return b
 }
 
-func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmersFile string, k int) error {
+func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmersFile string, goodKmerLength int) error {
 	// Convert the good k-mers to canonical uint64 representation
-	goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, k)
+	goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, goodKmerLength)
 	if err != nil {
 		return err
 	}
 
 	// Read off-target k-mers and build a map of removed k-mers
-	removedKmers, err := removeOffTargetUint64KmersConcurrent(offTargetKmersFile, goodUint64Kmers, k, 12)
+	removedKmers, err := removeOffTargetUint64KmersConcurrent(offTargetKmersFile, goodUint64Kmers, 32)
 	if err != nil {
 		return err
 	}
 
 	// Remove the k-mers found in removedKmers from the original goodKmers map
 	removeKmersFromGoodKmers(goodKmers, removedKmers)
-	fmt.Printf("\nOff-target kmers removed: %d\n\n", len(removedKmers))
+	fmt.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
 	return nil
 }

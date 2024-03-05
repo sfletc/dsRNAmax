@@ -119,7 +119,7 @@ func Test_conGetOTKmers(t *testing.T) {
 				otRef:   []*HeaderRef{{"test", "ACGTA", "TACGT"}, {"test2", "ACGT", "ACGT"}},
 				kmerLen: 4,
 			},
-			want: map[string]struct{}{"ACGT": struct{}{}, "CGTA": struct{}{}},
+			want: map[string]struct{}{"ACGT": {}, "CGTA": {}},
 		},
 	}
 	for _, tt := range tests {
@@ -145,7 +145,7 @@ func Test_removeOTKmers(t *testing.T) {
 			name: "removeKmerSuccess",
 			args: args{
 				kmers:   map[string][]int{"ACGT": {1, 1}, "CGTA": {1, 0}, "GTC": {0, 1}, "AATC": {1, 1}},
-				otKmers: map[string]struct{}{"ACGT": struct{}{}, "CGTA": struct{}{}, "GTC": struct{}{}},
+				otKmers: map[string]struct{}{"ACGT": {}, "CGTA": {}, "GTC": {}},
 			},
 			want: map[string][]int{"AATC": {1, 1}},
 		},
@@ -233,7 +233,7 @@ func Test_mean(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "geoMeanSuccess",
+			name: "medianSuccess",
 			args: args{
 				input: []int{1, 2, 3},
 			},
@@ -241,7 +241,7 @@ func Test_mean(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "geoMeanError",
+			name: "medianError",
 			args: args{
 				input: []int{},
 			},
@@ -251,13 +251,13 @@ func Test_mean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := mean(tt.args.input)
+			got, err := calculateMedian(tt.args.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("geoMean() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("median() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("geoMean() = %v, want %v", got, tt.want)
+				t.Errorf("median() = %v, want %v", got, tt.want)
 			}
 		})
 	}

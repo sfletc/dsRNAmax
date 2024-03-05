@@ -101,23 +101,6 @@ func main() {
 		fmt.Printf("Removing off-target kmers\n\n")
 		removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
 	}
-	// if *otRefFiles != "" {
-	// 	fmt.Printf("Removing off-target kmers\n\n")
-	// 	files := strings.Split(*otRefFiles, ",")
-	// 	ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
-	// }
-	// if *otKmerFile != "" {
-	// 	fmt.Printf("Removing off-target kmers\n\n")
-	// 	goodUint64kmers, err := convertGoodKmersToUint64Set(goodKmers, *kmerLength)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	otKmers, err := removeOffTargetUint64KmersConcurrent(*otKmerFile, goodUint64kmers, *kmerLength, 32)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	removeKmersFromGoodKmers(goodKmers, otKmers)
-	// }
 
 	fmt.Println("Counting kmers")
 	kmerCts := kmerAbun(goodKmers)

@@ -25,11 +25,11 @@ func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *co
 		fmt.Println("Results written to", csvFileName)
 	}
 	// Calculate and output the geometric mean
-	mean, err := mean(modKmerHits)
+	mean, err := calculateMedian(modKmerHits)
 	if err != nil {
-		fmt.Println("Error calculating geometric mean:", err)
+		fmt.Println("Error calculating median:", err)
 	} else {
-		fmt.Println("\nGeometric mean of kmer hits to each target sequence:", mean)
+		fmt.Println("\nMedian of kmer hits to each target sequence:", mean)
 	}
 
 	// Other output information

@@ -33,6 +33,7 @@ package main
 import (
 	"errors"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 )
@@ -191,7 +192,7 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 			conScores[x] += y
 		}
 	}
-	mean, err := mean(conScores)
+	mean, err := calculateMedian(conScores)
 	if err == nil {
 		if mean > bestScore {
 			bestScore = mean
@@ -202,19 +203,25 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 	return bestScore, bestPos, bestConScores
 }
 
-// calculateMean takes a slice of integers and returns their mean as a float64.
+// calculateMedian takes a slice of integers and returns their median as a float64.
 // If the slice is empty, it returns an error.
-func mean(numbers []int) (float64, error) {
+func calculateMedian(numbers []int) (float64, error) {
 	// Check if the slice is empty
 	if len(numbers) == 0 {
 		return 0, errors.New("slice is empty")
 	}
 
-	var sum int
-	for _, num := range numbers {
-		sum += num
-	}
+	// Sort the slice in ascending order
+	sort.Ints(numbers)
 
-	mean := float64(sum) / float64(len(numbers))
-	return mean, nil
+	// Calculate the median
+	n := len(numbers)
+	midIndex := n / 2
+	if n%2 == 0 {
+		// Even length, take the average of the two middle elements
+		return float64(numbers[midIndex-1]+numbers[midIndex]) / 2.0, nil
+	} else {
+		// Odd length, take the middle element
+		return float64(numbers[midIndex]), nil
+	}
 }

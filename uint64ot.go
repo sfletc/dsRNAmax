@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -91,6 +92,16 @@ func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[u
 	return mergedRemovedKmers, nil
 }
 
+// kmerToSequence converts a uint64 representation of a kmer to its corresponding DNA sequence string.
+//
+// Args:
+//
+//	kmer: The uint64 representation of the kmer.
+//	k: The length of the kmer.
+//
+// Returns:
+//
+//	The DNA sequence string corresponding to the kmer.
 func kmerToSequence(kmer uint64, k int) string {
 	bases := "ACGT"
 	sequence := make([]byte, k)
@@ -102,6 +113,12 @@ func kmerToSequence(kmer uint64, k int) string {
 	return string(sequence)
 }
 
+// removeKmersFromGoodKmers removes kmers (and their reverse complements) from the 'goodKmers' map if they are present in the 'removedKmers' map.
+//
+// Args:
+//
+//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
+//	removedKmers: A map where keys are kmers identified for removal (e.g., off-target kmers).
 func removeKmersFromGoodKmers(goodKmers map[string][]int, removedKmers map[string]struct{}) {
 	for kmer := range goodKmers {
 		_, inRemoved := removedKmers[kmer]
@@ -115,7 +132,16 @@ func removeKmersFromGoodKmers(goodKmers map[string][]int, removedKmers map[strin
 	}
 }
 
-// convertGoodKmersToUint64Set converts a set of k-mers from string format to canonical uint64 format.
+// convertGoodKmersToUint64Set converts a map of string-based kmers to a map using their canonical uint64 representations (considering reverse complements).
+//
+// Args:
+//
+//	goodKmers: A map where keys are kmers as strings and values are presence/absence slices.
+//	k: The length of the kmers.
+//
+// Returns:
+//  1. A map[uint64]struct{} where keys are canonical uint64 representations of kmers.
+//  2. An error if any occurs during conversion.
 func convertGoodKmersToUint64Set(goodKmers map[string][]int, k int) (map[uint64]struct{}, error) {
 	goodUint64Kmers := make(map[uint64]struct{})
 
@@ -137,7 +163,7 @@ func convertGoodKmersToUint64Set(goodKmers map[string][]int, k int) (map[uint64]
 	return goodUint64Kmers, nil
 }
 
-// min returns the smaller of two uint64 values.
+// min returns the smaller of two uint64 values (utility function).
 func min(a, b uint64) uint64 {
 	if a < b {
 		return a
@@ -145,9 +171,64 @@ func min(a, b uint64) uint64 {
 	return b
 }
 
+// removeOffTargetKmersFromGoodKmers filters out off-target kmers from a set of good kmers (string-based) using a file of off-target kmer references.
+// It handles kmer encoding, concurrent reading of off-target kmers, and final removal.
+//
+// Args:
+//
+//	goodKmers: A map where keys are target kmers as strings and values are presence/absence slices.
+//	offTargetKmersFile: The path to a file containing off-target kmers (likely in uint64 representation).
+//	goodKmerLength: The length of the kmers in the 'goodKmers' map.
+//
+// Returns:
+//
+//	An error if any occurs during the filtering process
 func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmersFile string, goodKmerLength int) error {
+	file, err := os.Open(offTargetKmersFile)
+	if err != nil {
+		return fmt.Errorf("error opening file: %v", err)
+	}
+	defer file.Close()
+	//read the first line of the binary file to get the kmer length
+	var k64 uint64
+
+	if err := binary.Read(file, binary.LittleEndian, &k64); err != nil {
+		return fmt.Errorf("error reading kmer length: %v", err)
+	}
+
+	var k int = int(k64)
+	fmt.Println("OT kmer length: ", k)
+	if k < goodKmerLength {
+
+		removeOffTargetSubKmersFromGoodKmers(goodKmers, offTargetKmersFile, k)
+	} else {
+
+		// Convert the good k-mers to canonical uint64 representation
+		goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, goodKmerLength)
+		if err != nil {
+			return err
+		}
+
+		// Read off-target k-mers and build a map of removed k-mers
+		removedKmers, err := removeOffTargetUint64KmersConcurrent(offTargetKmersFile, goodUint64Kmers, 32)
+		if err != nil {
+			return err
+		}
+
+		// Remove the k-mers found in removedKmers from the original goodKmers map
+		removeKmersFromGoodKmers(goodKmers, removedKmers)
+		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
+
+	}
+	return nil
+}
+func removeOffTargetSubKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmersFile string, subKmerLength int) error {
 	// Convert the good k-mers to canonical uint64 representation
-	goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, goodKmerLength)
+	ori_len := len(goodKmers)
+
+	goodSubKmers := generateSubkmers(goodKmers, subKmerLength)
+
+	goodUint64Kmers, err := convertGoodKmersToUint64Set(goodSubKmers, subKmerLength)
 	if err != nil {
 		return err
 	}
@@ -159,7 +240,32 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 	}
 
 	// Remove the k-mers found in removedKmers from the original goodKmers map
-	removeKmersFromGoodKmers(goodKmers, removedKmers)
-	fmt.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
+	removeSubKmersFromGoodKmers(goodKmers, removedKmers)
+	fmt.Printf("Total off-target-matching kmers removed: %d\n\n", ori_len-len(goodKmers))
 	return nil
+}
+
+func generateSubkmers(goodKmers map[string][]int, subkmerLength int) map[string][]int {
+	subkmers := make(map[string][]int)
+
+	for kmer := range goodKmers {
+		for i := 0; i <= len(kmer)-subkmerLength; i++ {
+			subkmer := kmer[i : i+subkmerLength]
+			subkmers[subkmer] = nil // Explicitly setting value to nil for each subkmer key
+		}
+	}
+
+	return subkmers
+}
+
+// removeKmersContainingSubkmers removes entries from goodKmers whose keys contain any subkmer from subkmers.
+func removeSubKmersFromGoodKmers(goodKmers map[string][]int, subkmers map[string]struct{}) {
+	for kmer := range goodKmers {
+		for subkmer := range subkmers {
+			if strings.Contains(kmer, subkmer) || strings.Contains(kmer, reverseComplement(subkmer)) {
+				delete(goodKmers, kmer)
+				break
+			}
+		}
+	}
 }

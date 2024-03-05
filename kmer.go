@@ -38,11 +38,16 @@ import (
 	"sync"    // For using WaitGroup and Mutex
 )
 
-// Identify all unique kmers in provided sense strand sequences
-// TODO: should the reverse complement be included?
-// Output is a map with kmer seq as key and a slice of 1s and 0s indicating which
-// input target sequence the kmer is present in.
-
+// getKmers extracts all unique kmers of a specified length from a set of reference sequences.
+//
+// Args:
+//
+//	ref: A slice of HeaderRef structures containing reference sequences.
+//	kmerLen: The length of kmers to extract.
+//
+// Returns:
+//
+//	A map[string][]int where keys are kmers and values are slices indicating presence (1) or absence (0) of the kmer in each input sequence.
 func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	refLen := len(ref)
 	kmers := make(map[string][]int)
@@ -65,30 +70,25 @@ func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	return kmers
 }
 
-// func otRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
-// 	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeOTKmers)
-// }
-
-// func otShortRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string) map[string][]int {
-// 	return processOTRemoval(goodKmers, OTkmerLength, otRefFiles, removeMappedLongOTKmers)
-// }
-
-// func processOTRemoval(goodKmers map[string][]int, OTkmerLength int, otRefFiles string, removalFunc func(map[string][]int, map[string]struct{})) map[string][]int {
-// 	files := strings.Split(otRefFiles, ",")
-// 	for _, otRefFile := range files {
-// 		otRef := RefLoad(otRefFile)
-// 		otKmers := conGetOTKmers(goodKmers, otRef, OTkmerLength)
-// 		removalFunc(goodKmers, otKmers)
-// 	}
-// 	return goodKmers
-// }
-
+// removeOTKmers removes off-target kmers from the 'goodKmers' map.
+//
+// Args:
+//
+//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
+//	otKmers: A map where keys are identified off-target kmers.
 func removeOTKmers(goodKmers map[string][]int, otKmers map[string]struct{}) {
 	for key := range otKmers {
 		delete(goodKmers, key)
 	}
 }
 
+// removeMappedLongOTKmers removes target kmers from the 'goodKmers' map if they contain any of the provided off-target kmers as substrings.
+// This helps filter out potential off-target effects even if there's not an exact match.
+//
+// Args:
+//
+//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
+//	otKmers: A map where keys are identified off-target kmers.
 func removeMappedLongOTKmers(goodKmers map[string][]int, otKmers map[string]struct{}) {
 	for ok := range otKmers {
 		for gk := range goodKmers {
@@ -99,8 +99,17 @@ func removeMappedLongOTKmers(goodKmers map[string][]int, otKmers map[string]stru
 	}
 }
 
-// Identifies off-target kmers present in the off-target (either orientation) set
-// This is done concurrently to improve speed
+// conGetOTKmers identifies off-target kmers present in a set of off-target sequences, performing the search concurrently for efficiency.
+//
+// Args:
+//
+//	kmers: A map where keys are target kmers and values are presence/absence slices.
+//	otRef: A slice of HeaderRef structures containing off-target sequences.
+//	kmerLen: The length of kmers to search for.
+//
+// Returns:
+//
+//	A map[string]struct{} where keys represent off-target kmers found within the provided off-target sequences.
 func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[string]struct{} {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(otRef))
@@ -122,9 +131,15 @@ func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[
 	return allOTKmers
 }
 
-// Concurrent worker function.  Takes an off-target HeaderRef from the queue
-// and adds checks if derived kmers are in the target kmer pool.  If so,
-// added to a map, when is then added to the output queue upon completion
+// workerGo is a concurrent worker function that processes a single off-target sequence for off-target kmer identification.
+//
+// Args:
+//
+//	kmers: A map where keys are target kmers and values are presence/absence slices.
+//	otRefChan: A channel receiving HeaderRef structures (off-target sequences).
+//	kmerLen: The length of kmers to search for.
+//	headerKmerChan: A channel for sending maps of identified off-target kmers.
+//	wg: A WaitGroup for synchronization with the main process.
 func workerGo(kmers map[string][]int, otRefChan chan *HeaderRef, kmerLen int, headerKmerChan chan map[string]struct{}, wg *sync.WaitGroup) {
 	otRef := <-otRefChan
 	otKmers := make(map[string]struct{})
@@ -228,7 +243,16 @@ func KmerCheckSeqs(seqChan <-chan string, goodKmers map[string][]int, kmerLen in
 	toDeleteChan <- toDelete
 }
 
-func smallKmerCheckSeqs(seqChan <-chan string, subKmers map[string][]string, kmerLen int, subKmerLen int, wg *sync.WaitGroup, toDeleteChan chan map[string][]string) {
+// smallKmerCheckSeqs processes a sequence, searching for sub-kmers that may indicate potential off-target matches. It sends kmers to be filtered out through a channel.
+//
+// Args:
+//
+//	seqChan: A channel receiving DNA sequences.
+//	subKmers: A map where keys are sub-kmers and values are lists of their corresponding longer kmers.
+//	subKmerLen: The length of the sub-kmers.
+//	wg: A WaitGroup for synchronization with the main process.
+//	toDeleteChan: A channel for sending maps of sub-kmers (and their associated longer kmers) to be deleted.
+func smallKmerCheckSeqs(seqChan <-chan string, subKmers map[string][]string, subKmerLen int, wg *sync.WaitGroup, toDeleteChan chan map[string][]string) {
 	defer wg.Done()
 
 	toDelete := make(map[string][]string) // Temporary set to store k-mers to delete
@@ -253,6 +277,17 @@ func smallKmerCheckSeqs(seqChan <-chan string, subKmers map[string][]string, kme
 	toDeleteChan <- toDelete
 }
 
+// GenerateSubKmersMap creates a map where keys are shorter substrings (sub-kmers) and values are lists of the original kmers that contain those sub-kmers.
+// This is often used for more flexible off-target matching.
+//
+// Args:
+//
+//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
+//	subKmerLen: The desired length of the sub-kmers to be generated.
+//
+// Returns:
+//
+//	A map[string][]string where keys are sub-kmers and values are lists of the original kmers containing them.
 func GenerateSubKmersMap(goodKmers map[string][]int, subKmerLen int) map[string][]string {
 	subKmers := make(map[string][]string)
 
@@ -274,6 +309,7 @@ func GenerateSubKmersMap(goodKmers map[string][]int, subKmerLen int) map[string]
 }
 
 func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int, kmerLen int, subKmerLen int) {
+	ori_len := len(goodKmers)
 	seqChan := make(chan string, 100)                         // Buffered channel for better performance
 	toDeleteChan := make(chan map[string]struct{}, 20)        // Channel to collect toDelete maps from workers
 	toDeleteSubKmerChan := make(chan map[string][]string, 20) // Channel to collect toDelete maps from workers
@@ -303,7 +339,7 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 		if subKmerLen == kmerLen {
 			go KmerCheckSeqs(seqChan, goodKmers, kmerLen, &consumerWG, toDeleteChan)
 		} else {
-			go smallKmerCheckSeqs(seqChan, subKmers, kmerLen, subKmerLen, &consumerWG, toDeleteSubKmerChan)
+			go smallKmerCheckSeqs(seqChan, subKmers, subKmerLen, &consumerWG, toDeleteSubKmerChan)
 		}
 	}
 
@@ -322,7 +358,7 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 				}
 			}
 		}
-		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", deletedKmerCount)
+		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", ori_len-len(goodKmers))
 	} else {
 		close(toDeleteSubKmerChan) // Close the toDelete channel once all consumers are done
 		deletedKmerCount := 0
@@ -336,7 +372,7 @@ func ConcurrentlyProcessSequences(refFiles []string, goodKmers map[string][]int,
 				}
 			}
 		}
-		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", deletedKmerCount)
+		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", ori_len-len(goodKmers))
 
 	}
 

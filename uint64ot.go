@@ -10,6 +10,16 @@ import (
 	"sync"
 )
 
+// removeOffTargetUint64KmersConcurrent removes off-target kmers from a set of good kmers using concurrent processing.
+//
+// Parameters:
+//   - filename: The path to the file containing off-target kmers in binary format.
+//   - goodUint64Kmers: A map of good kmers in uint64 representation.
+//   - numWorkers: The number of worker goroutines to use for concurrent processing.
+//
+// Returns:
+//   - A map of removed kmers, where the keys are the kmer sequences.
+//   - An error if any occurs during the process.
 func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[uint64]struct{}, numWorkers int) (map[string]struct{}, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -222,6 +232,16 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 	}
 	return nil
 }
+
+// removeOffTargetSubKmersFromGoodKmers removes off-target subkmers from a set of good kmers (string-based) using a file of off-target kmer references.
+//
+// Parameters:
+//   - goodKmers: A map where keys are target kmers as strings and values are presence/absence slices.
+//   - offTargetKmersFile: The path to a file containing off-target kmers (likely in uint64 representation).
+//   - subKmerLength: The length of the subkmers to consider.
+//
+// Returns:
+//   - An error if any occurs during the filtering process.
 func removeOffTargetSubKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmersFile string, subKmerLength int) error {
 	// Convert the good k-mers to canonical uint64 representation
 	ori_len := len(goodKmers)
@@ -245,6 +265,14 @@ func removeOffTargetSubKmersFromGoodKmers(goodKmers map[string][]int, offTargetK
 	return nil
 }
 
+// generateSubkmers generates all subkmers of a given length from a set of kmers.
+//
+// Parameters:
+//   - goodKmers: A map where keys are kmers as strings and values are presence/absence slices.
+//   - subkmerLength: The length of the subkmers to generate.
+//
+// Returns:
+//   - A map where keys are the generated subkmers and values are nil.
 func generateSubkmers(goodKmers map[string][]int, subkmerLength int) map[string][]int {
 	subkmers := make(map[string][]int)
 
@@ -258,7 +286,11 @@ func generateSubkmers(goodKmers map[string][]int, subkmerLength int) map[string]
 	return subkmers
 }
 
-// removeKmersContainingSubkmers removes entries from goodKmers whose keys contain any subkmer from subkmers.
+// removeSubKmersFromGoodKmers removes entries from goodKmers whose keys contain any subkmer from subkmers.
+//
+// Parameters:
+//   - goodKmers: A map where keys are target kmers and values are presence/absence slices.
+//   - subkmers: A map where keys are subkmers to be removed from goodKmers.
 func removeSubKmersFromGoodKmers(goodKmers map[string][]int, subkmers map[string]struct{}) {
 	for kmer := range goodKmers {
 		for subkmer := range subkmers {

@@ -97,9 +97,13 @@ func main() {
 		fmt.Printf("Removing off-target kmers\n\n")
 		files := strings.Split(*otRefFiles, ",")
 		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
+		//TODO: check if off-target FASTA files are valid
 	case *otKmerFile != "":
 		fmt.Printf("Removing off-target kmers\n\n")
-		removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
+		err := removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	fmt.Println("Counting kmers")

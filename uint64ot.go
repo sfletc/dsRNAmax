@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -19,25 +20,25 @@ import (
 //
 // Returns:
 //   - A map of removed kmers, where the keys are the kmer sequences.
-//   - An error if any occurs during the process.
 func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[uint64]struct{}, numWorkers int) (map[string]struct{}, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
-	//read the first line of the binary file to get the kmer length
-	var k64 uint64
 
+	// Read the first line of the binary file to get the kmer length
+	var k64 uint64
 	if err := binary.Read(file, binary.LittleEndian, &k64); err != nil {
 		return nil, fmt.Errorf("error reading kmer length: %v", err)
 	}
+	k := int(k64)
 
-	var k int = int(k64)
 	const chunkSize = 1024 * 64 // 64 KB; adjust as needed
 	kmerSize := binary.Size(uint64(0))
 	kmerChan := make(chan []byte, numWorkers)
-	removedKmerChan := make(chan map[string]struct{})
+	removedKmerChan := make(chan map[string]struct{}, numWorkers)
+
 	var wg sync.WaitGroup
 
 	// Start worker goroutines to process chunks of k-mers
@@ -46,50 +47,36 @@ func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[u
 		go func() {
 			defer wg.Done()
 			localRemovedKmers := make(map[string]struct{})
+
 			for chunk := range kmerChan {
-				for j := 0; j < len(chunk); j += kmerSize {
-					var kmer uint64
-					buf := bytes.NewReader(chunk[j : j+kmerSize])
-					if err := binary.Read(buf, binary.LittleEndian, &kmer); err != nil {
-						// Handle error (log or break)
-						continue
-					}
-					if _, found := goodUint64Kmers[kmer]; found {
-						seq := kmerToSequence(kmer, k)
-						localRemovedKmers[seq] = struct{}{}
-					}
-				}
+				processChunk(chunk, kmerSize, k, goodUint64Kmers, localRemovedKmers)
 			}
+
 			removedKmerChan <- localRemovedKmers
 		}()
 	}
 
 	// Read large chunks of data and send to worker goroutines
-	go func() {
-		defer close(kmerChan)
-		buf := make([]byte, chunkSize)
-		for {
-			bytesRead, err := file.Read(buf)
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				// Handle other errors
+	buf := make([]byte, chunkSize)
+	for {
+		bytesRead, err := file.Read(buf)
+		if err != nil {
+			if err == io.EOF {
 				break
 			}
-			if bytesRead > 0 {
-				chunk := make([]byte, bytesRead)
-				copy(chunk, buf[:bytesRead])
-				kmerChan <- chunk
-			}
+			return nil, fmt.Errorf("error reading file: %v", err)
 		}
-	}()
 
-	// Wait for all workers to finish and close the removedKmerChan
-	go func() {
-		wg.Wait()
-		close(removedKmerChan)
-	}()
+		if bytesRead > 0 {
+			chunk := make([]byte, bytesRead)
+			copy(chunk, buf[:bytesRead])
+			kmerChan <- chunk
+		}
+	}
+
+	close(kmerChan)
+	wg.Wait()
+	close(removedKmerChan)
 
 	// Merge results from workers
 	mergedRemovedKmers := make(map[string]struct{})
@@ -100,6 +87,22 @@ func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[u
 	}
 
 	return mergedRemovedKmers, nil
+}
+
+func processChunk(chunk []byte, kmerSize, k int, goodUint64Kmers map[uint64]struct{}, localRemovedKmers map[string]struct{}) {
+	for j := 0; j < len(chunk); j += kmerSize {
+		var kmer uint64
+		buf := bytes.NewReader(chunk[j : j+kmerSize])
+		if err := binary.Read(buf, binary.LittleEndian, &kmer); err != nil {
+			log.Printf("Error reading kmer: %v", err)
+			continue
+		}
+
+		if _, found := goodUint64Kmers[kmer]; found {
+			seq := kmerToSequence(kmer, k)
+			localRemovedKmers[seq] = struct{}{}
+		}
+	}
 }
 
 // kmerToSequence converts a uint64 representation of a kmer to its corresponding DNA sequence string.
@@ -205,14 +208,15 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 	if err := binary.Read(file, binary.LittleEndian, &k64); err != nil {
 		return fmt.Errorf("error reading kmer length: %v", err)
 	}
-
-	var k int = int(k64)
-	fmt.Println("OT kmer length: ", k)
-	if k < goodKmerLength {
-
-		removeOffTargetSubKmersFromGoodKmers(goodKmers, offTargetKmersFile, k)
-	} else {
-
+	fmt.Println("Kmer length: ", goodKmerLength)
+	var OTKmerLen int = int(k64)
+	fmt.Println("OT kmer length: ", OTKmerLen)
+	switch {
+	case OTKmerLen > goodKmerLength:
+		return fmt.Errorf("off-target kmer length is greater than target kmer length - it must be equal or lower")
+	case OTKmerLen < goodKmerLength:
+		removeOffTargetSubKmersFromGoodKmers(goodKmers, offTargetKmersFile, OTKmerLen)
+	default:
 		// Convert the good k-mers to canonical uint64 representation
 		goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, goodKmerLength)
 		if err != nil {
@@ -228,7 +232,6 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 		// Remove the k-mers found in removedKmers from the original goodKmers map
 		removeKmersFromGoodKmers(goodKmers, removedKmers)
 		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
-
 	}
 	return nil
 }

@@ -208,9 +208,9 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 	if err := binary.Read(file, binary.LittleEndian, &k64); err != nil {
 		return fmt.Errorf("error reading kmer length: %v", err)
 	}
-	fmt.Println("Kmer length: ", goodKmerLength)
+	log.Println("Kmer length: ", goodKmerLength)
 	var OTKmerLen int = int(k64)
-	fmt.Println("OT kmer length: ", OTKmerLen)
+	log.Println("OT kmer length: ", OTKmerLen)
 	switch {
 	case OTKmerLen > goodKmerLength:
 		return fmt.Errorf("off-target kmer length is greater than target kmer length - it must be equal or lower")
@@ -231,7 +231,7 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 
 		// Remove the k-mers found in removedKmers from the original goodKmers map
 		removeKmersFromGoodKmers(goodKmers, removedKmers)
-		fmt.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
+		log.Printf("Total off-target-matching kmers removed: %d\n\n", len(removedKmers))
 	}
 	return nil
 }
@@ -264,7 +264,7 @@ func removeOffTargetSubKmersFromGoodKmers(goodKmers map[string][]int, offTargetK
 
 	// Remove the k-mers found in removedKmers from the original goodKmers map
 	removeSubKmersFromGoodKmers(goodKmers, removedKmers)
-	fmt.Printf("Total off-target-matching kmers removed: %d\n\n", ori_len-len(goodKmers))
+	log.Printf("Total off-target-matching kmers removed: %d\n\n", ori_len-len(goodKmers))
 	return nil
 }
 

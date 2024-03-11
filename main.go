@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "1.0.3"
+var Version = "1.0.4"
 
 func errorShutdown() {
 	fmt.Println("\nExiting program")
@@ -64,55 +64,134 @@ func clInput() (*string, *string, *int, *string, *int, *int, *int, *string, *int
 }
 
 func main() {
-	fmt.Println("\ndsRNAmax - dsRNA maximizer")
-	fmt.Println("Version:\t", Version)
-	fmt.Println("")
+	log.Printf("dsRNAmax - dsRNA maximizer (Version: %s)\n", Version)
+
 	refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, err := clInput()
 	if err != nil {
 		log.Fatal(err)
 	}
-	//TODO: check if otKmer length <= kmerLength
-	fmt.Println("Target FASTA File:\t", *refFile)
-	if *otRefFiles != "" {
-		fmt.Println("Off-target FASTA File:\t", *otRefFiles)
+
+	if *otKmerLength > *kmerLength && *otKmerFile == "" {
+		log.Fatalf("Off-target kmer length (%d) must be <= kmer length (%d)", *otKmerLength, *kmerLength)
 	}
-	fmt.Println("\nLoading target sequences")
+
+	if _, err := os.Stat(*refFile); os.IsNotExist(err) {
+		log.Fatalf("Target FASTA file does not exist: %s", *refFile)
+	}
+
+	log.Printf("Target FASTA File: %s", *refFile)
+	if *otRefFiles != "" {
+		log.Printf("Off-target FASTA File: %s", *otRefFiles)
+	}
+
+	log.Println("Loading target sequences...")
 	ref := RefLoad(*refFile)
+
 	if *biasHeader != "" {
+		log.Printf("Applying bias modification to sequence '%s' at level %d...", *biasHeader, *biasLvl)
 		ref, err = biasMod(ref, *biasHeader, *biasLvl)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	fmt.Printf("Getting target sequence kmers\n\n")
+
+	log.Println("Getting target sequence kmers...")
 	goodKmers := getKmers(ref, *kmerLength)
-	fmt.Printf("%s target kmers loaded\n\n", intWithCommas(len(goodKmers)))
+	log.Printf("%s target kmers loaded\n", intWithCommas(len(goodKmers)))
 
-	switch {
+	if *otRefFiles != "" && *otKmerFile != "" {
+		log.Fatalln("Error: both off-target FASTA files and an off-target kmer file specified. Please specify only one.")
+	}
 
-	case *otRefFiles != "" && *otKmerFile != "":
-		fmt.Println("Error: both off-target FASTA files and an off-target kmer file specified.  Please specify only one.")
-		errorShutdown()
-	case *otRefFiles != "":
-		fmt.Printf("Removing off-target kmers\n\n")
+	if *otRefFiles != "" {
+		log.Println("Removing off-target kmers from FASTA files...")
 		files := strings.Split(*otRefFiles, ",")
-		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
-		//TODO: check if off-target FASTA files are valid
-	case *otKmerFile != "":
-		fmt.Printf("Removing off-target kmers\n\n")
-		err := removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
+		for _, file := range files {
+			if _, err := os.Stat(file); os.IsNotExist(err) {
+				log.Fatalf("Off-target FASTA file does not exist: %s", file)
+			}
+		}
+		removeOffTargetKmersFromFasta(files, goodKmers, *kmerLength, *otKmerLength)
+	}
+
+	if *otKmerFile != "" {
+		log.Println("Removing off-target kmers from kmer file...")
+		err := removeOffTargetKmersFromFile(goodKmers, *otKmerFile, *kmerLength)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println("Counting kmers")
+	log.Println("Finding best construct...")
 	kmerCts := kmerAbun(goodKmers)
-	fmt.Println("Finding best construct")
 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
 	if selConstruct != nil {
+		log.Printf("Identified optimal construct of length %d with a median kmer match of %.2f\n", *consLength, selConstruct.medianHits)
 		outputResults(goodKmers, kmerLength, selConstruct, ref, *csv)
 	} else {
-		fmt.Println("Could not identify a dsRNA sense arm sequence.  Check input format and sequence lengths")
+		log.Println("Could not identify a dsRNA sense arm sequence. Check input format, increase OT kmer length, and/or try a shorter construct length")
+		os.Exit(1)
 	}
 }
+
+func removeOffTargetKmersFromFasta(files []string, goodKmers map[string][]int, kmerLength int, otKmerLength int) {
+	ConcurrentlyProcessSequences(files, goodKmers, kmerLength, otKmerLength)
+}
+
+func removeOffTargetKmersFromFile(goodKmers map[string][]int, otKmerFile string, kmerLength int) error {
+	return removeOffTargetKmersFromGoodKmers(goodKmers, otKmerFile, kmerLength)
+}
+
+// func main() {
+// 	fmt.Println("\ndsRNAmax - dsRNA maximizer")
+// 	fmt.Println("Version:\t", Version)
+// 	fmt.Println("")
+// 	refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, err := clInput()
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	//TODO: check if otKmer length <= kmerLength
+// 	fmt.Println("Target FASTA File:\t", *refFile)
+// 	if *otRefFiles != "" {
+// 		fmt.Println("Off-target FASTA File:\t", *otRefFiles)
+// 	}
+// 	fmt.Println("\nLoading target sequences")
+// 	ref := RefLoad(*refFile)
+// 	if *biasHeader != "" {
+// 		ref, err = biasMod(ref, *biasHeader, *biasLvl)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 	}
+// 	fmt.Printf("Getting target sequence kmers\n\n")
+// 	goodKmers := getKmers(ref, *kmerLength)
+// 	fmt.Printf("%s target kmers loaded\n\n", intWithCommas(len(goodKmers)))
+
+// 	switch {
+
+// 	case *otRefFiles != "" && *otKmerFile != "":
+// 		fmt.Println("Error: both off-target FASTA files and an off-target kmer file specified.  Please specify only one.")
+// 		errorShutdown()
+// 	case *otRefFiles != "":
+// 		fmt.Printf("Removing off-target kmers\n\n")
+// 		files := strings.Split(*otRefFiles, ",")
+// 		ConcurrentlyProcessSequences(files, goodKmers, *kmerLength, *otKmerLength)
+// 		//TODO: check if off-target FASTA files are valid
+// 	case *otKmerFile != "":
+// 		fmt.Printf("Removing off-target kmers\n\n")
+// 		err := removeOffTargetKmersFromGoodKmers(goodKmers, *otKmerFile, *kmerLength)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 	}
+
+// 	fmt.Println("Counting kmers")
+// 	kmerCts := kmerAbun(goodKmers)
+// 	fmt.Println("Finding best construct")
+// 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
+// 	if selConstruct != nil {
+// 		outputResults(goodKmers, kmerLength, selConstruct, ref, *csv)
+// 	} else {
+// 		fmt.Println("Could not identify a dsRNA sense arm sequence.  Check input format and sequence lengths")
+// 	}
+// }

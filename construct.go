@@ -41,9 +41,9 @@ import (
 // construct struct contains kmerHits slice (total present in each input target),
 // the geometric mean of the slice, and the sequence of the selected construct
 type construct struct {
-	kmerHits []int
-	geoMean  float64
-	seq      string
+	kmerHits   []int
+	medianHits float64
+	seq        string
 }
 
 // Concurrent implementation to identify the best construct over multiple iterations
@@ -91,8 +91,8 @@ func compileConsSeqs(consSeqsChan chan *construct) *construct {
 	best := 0.0
 	for eachConstruct := range consSeqsChan {
 
-		if eachConstruct.geoMean > best {
-			best = eachConstruct.geoMean
+		if eachConstruct.medianHits > best {
+			best = eachConstruct.medianHits
 			selConstruct = eachConstruct
 		}
 	}

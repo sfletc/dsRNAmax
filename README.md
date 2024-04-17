@@ -25,7 +25,7 @@ Command:
 Output:
 ```
 dsRNAmax - dsRNA maximizer
-Version:         1.0.1
+Version:         1.1.1.
 
 Usage of .\dsRNAmax_Win.exe:
   -biasHeader string

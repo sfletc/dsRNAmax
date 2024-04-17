@@ -1,8 +1,6 @@
-# dsRNAmax: a multi-target double-stranded RNA design package for enhanced crop protection
+# dsRNAmax: a multi-target double-stranded RNA design package 
 
-Crop protection increasingly relies on sustainable approaches that do not adversely impact the environment or human health.  RNA interference (RNAi) is being used via application or expression of double-stranded RNA (dsRNA) to target viral, fungal and insect pests and pathogens.  
-
-dsRNAmax (dsRNAmaximizer) is a software package using a biologically relevant kmer based approach for multi-target dsRNA design while mitigating unintended impacts to beneficial organisms.  Where a specific target is considered a priority, the design algorithm can be biased toward that target.  Output sense arm sequences can be synthesised as dsRNAs, with their efficacy and ability to mitigate off-target impacts determined experimentally.   
+dsRNAmax (dsRNAmaximizer) uses a kmer-based approach for multi-target dsRNA design and off-target avoidance. The package maximizes the number of kmers (default = 21nt, a common length of DICER-processed siRNAs) that perfectly match each input target sequence while avoiding any contiguous match of a specified length to any off-target sequence (default = 21nt, but this off-target kmer length can be less than the target kmer length).
     
 
 ![Alt text](./bioinf_github.jpg "dsRNA design")

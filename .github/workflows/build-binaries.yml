@@ -25,6 +25,19 @@ jobs:
   build:
     needs: create_release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: windows
+            arch: amd64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -37,20 +50,19 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Build binaries
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.arch }}
       run: |
-        GOOS=linux GOARCH=amd64 go build -o binary-linux-amd64
-        GOOS=linux GOARCH=arm64 go build -o binary-linux-arm64
-        GOOS=windows GOARCH=amd64 go build -o binary-windows-amd64.exe
-        GOOS=darwin GOARCH=amd64 go build -o binary-darwin-amd64
-        GOOS=darwin GOARCH=arm64 go build -o binary-darwin-arm64
+        go build -o binary-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
 
-    - name: Upload Release Assets
+    - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create_release.outputs.upload_url }}
-        asset_path: ./binary-*
+        asset_path: ./binary-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
         asset_name: binary-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
         asset_content_type: application/octet-stream

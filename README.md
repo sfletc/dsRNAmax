@@ -8,8 +8,7 @@ dsRNAmax (dsRNAmaximizer) uses a kmer-based approach for multi-target dsRNA desi
 
 # Installation
 
-<!-- RELEASE_TABLE_START -->
-<!-- RELEASE_TABLE_END -->
+- Precompiled binaries for Windows, Linux and MacOS (Arm and Intel) can be downloaded from the [Releases page](https://github.com/sfletc/dsRNAmax/releases). For Linux and MacOS, ```chmod +x {executable}``` may be required.  
 
 - To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencies downloaded automatically.      
 

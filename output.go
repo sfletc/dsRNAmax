@@ -115,7 +115,7 @@ func kmerStats(kmersPerInput [][]string) [][]float64 {
 	var results [][]float64
 	// result := []float64{0, 0, 0}
 	for _, kmers := range kmersPerInput {
-		result := []float64{0, 0, 0}
+		result := []float64{0, 0, 0, 0}
 		for _, kmer := range kmers {
 			switch kmer[len(kmer)-1:] {
 			case "A":
@@ -125,6 +125,7 @@ func kmerStats(kmersPerInput [][]string) [][]float64 {
 			case "G":
 				result[2] += 1.0 / float64(len(kmers))
 			}
+			result[3] += 1.0
 		}
 		results = append(results, result)
 	}
@@ -164,7 +165,7 @@ func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *cons
 			// Prepare row data for the terminal table output
 			tableRow := []string{
 				ref[i].Header,
-				strconv.Itoa(j),
+				strconv.FormatFloat(kmerStats[i][3], 'f', 0, 64),
 				strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg)*100, 'f', 1, 64),
 				strconv.FormatFloat(meanGC[i], 'f', 1, 64),
 				strconv.FormatFloat(kmerStats[i][0]*100, 'f', 1, 64),
@@ -176,7 +177,7 @@ func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *cons
 			// Prepare row data for CSV output
 			csvRow := []string{
 				ref[i].Header,
-				strconv.Itoa(j),
+				strconv.FormatFloat(kmerStats[i][3], 'f', 0, 64),
 				strconv.FormatFloat(strutil.Similarity(selConstruct.seq, ref[i].Seq, swg)*100, 'f', 1, 64),
 				strconv.FormatFloat(meanGC[i], 'f', 1, 64),
 				strconv.FormatFloat(kmerStats[i][0]*100, 'f', 1, 64),

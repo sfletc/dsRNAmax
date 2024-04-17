@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "1.1.1"
+var Version = "1.1.12"
 
 func errorShutdown() {
 	fmt.Println("\nExiting program")

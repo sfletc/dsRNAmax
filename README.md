@@ -17,7 +17,7 @@ dsRNAmax (dsRNAmaximizer) uses a kmer-based approach for multi-target dsRNA desi
 
 # Usage
 
-- The only required input is a FASTA file containing the target sequences the dsRNA should be optimised for. This will generate a 300nt dsRNA sense arm sequence that attempts to maximise the number of dsRNA-derived 21nt kmers that exactly match each input sequence.
+- The only required input is a FASTA file containing the target sequences the dsRNA should be optimised for. This will generate a 300nt dsRNA sense arm sequence that attempts to maximize the number of dsRNA-derived 21nt kmers that exactly match each input sequence.
 
 ### Help (-h) 
 
@@ -137,35 +137,38 @@ AGGTAAAGCATCTCTAGCAGAAACGGACAAAATCACCTTGGAAATTGCCAGGCTTCTTAAAGAAGATTTCTTGCAACAAA
 In some cases, it's desirable to maximise the number of kmers matching a particular sequence, while still maintaining effectiveness against other input targets.  This can be achieved by using ```-biasLvL``` and ```-biasHeader```.  For ```-biasHeader```, the full header (excluding ">") should be entered - use quotes if there are spaces.  For ```-biasLvl```, input an integer for the degree of bias to apply.  The integer used will add additional copies of the selected sequence to the design process, with its effect depended on the total number of input target sequences, so it's worth trialling different degrees of bias (starting at 1).  
 
 ```
-.\dsRNAmax_Win.exe -targets .\software\dsRNAConsDesigner\cr.fa -biasLvl 1 -biasHeader "XM_028294206.1 PREDICTED: Diabrotica virgifera virgifera V-type proton ATPase catalytic subunit A (LOC114343389), mRNA"
+dsRNAmax -targets wstrn_sthrn_corn_rootowrm_vATPaseA.fa -offTargets 7_spotted_ladybird.fa -biasHeader WCR_vATPase_A -biasLvl 1
 ```
 
 Output:
 
 ```
-dsRNAmax - dsRNA maximizer
-Version:         1.0.1
-
-.\cr.fa
-Loading target sequences
+2024/04/18 10:40:30 dsRNAmax - dsRNA maximizer (Version: 1.1.12)
+2024/04/18 10:40:30 Target FASTA File: wstrn_sthrn_corn_rootowrm_vATPaseA.fa
+2024/04/18 10:40:30 Off-target FASTA File: 7_spotted_ladybird.fa
+2024/04/18 10:40:30 Loading target sequences...
      ---> 2 sequences loaded
-Getting target sequence kmers
-Counting kmers
-Finding best construct
+2024/04/18 10:40:30 Applying bias modification to sequence 'WCR_vATPase_A' at level 1...
+2024/04/18 10:40:30 Getting target sequence kmers...
+2024/04/18 10:40:30 3,358 target kmers loaded
+2024/04/18 10:40:30 Removing off-target kmers from FASTA files...
+Total off-target-matching kmers removed: 35
+
+2024/04/18 10:40:39 Finding best construct...
+2024/04/18 10:40:40 Identified optimal construct of length 300 with a median kmer match of 280.00
 
 Results:
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+
 | TARGET SEQUENCE HEADER | 21NT MATCHES | SWG SIMILARITY (%) | KMER MEAN GC (%) | 5'U (%) | 5'A (%) | 5'C (%) |
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+
-| WCR_vATPase_A          | 217          | 95.0               | 43.2             | 27.6    | 30.4    | 26.3    |
-| SCR_vATPase_A          | 253          | 98.0               | 42.7             | 26.9    | 30.8    | 24.9    |
+| WCR_vATPase_A          | 280          | 100.0              | 43.9             | 30.4    | 26.1    | 28.6    |
+| SCR_vATPase_A          | 108          | 66.7               | 44.8             | 28.7    | 30.6    | 27.8    |
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+
 
+Median of kmer hits to each target sequence: 194
 
-Geometric mean of kmer hits to each target sequence: 230.65125189341592
-
-dsRNA sense-arm sequence - 43.0% GC content
-ATCGGAGATGAAGAGAAGGAAGGGCAGTATGGTTATGTCCATGCTGTCTCAGGTCCAGTCGTTACTGCTGAGAAAATGTCTGGTTCTGCTATGTACGAACTGGTACGTGTCGGATACTATGAGCTGGTAGGAGAAATCATTAGATTGGAAGGTGACATGGCTACTATTCAGGTATACGAAGAAACATCAGGTGTAACTGTTGGTGATCCAGTATTAAGAACTGGTAAACCACTTTCAGTAGAACTTGGACCTGGTATTATGGGTTCCATTTTTGATGGTATCCAACGTCCATTGAAAGAC
+dsRNA sense-arm sequence - 43.7% GC content
+GAAAACTCGTCCATAATCGCGATAGTTGAGTGGGTGAGGTTCCAAGAGAAACATAACATCCATCCACAAATATGTCGAAAGTAAGGATCGGAGATGAAGAGAAGGAAGGGCAGTATGGTTATGTCCATGCTGTCTCAGGTCCAGTCGTTACTGCTGAGAAAATGTCTGGTTCTGCTATGTACGAACTGGTACGTGTCGGATACTATGAGCTGGTAGGAGAAATCATTAGATTGGAAGGTGACATGGCTACTATTCAGGTATACGAAGAAACATCAGGTGTAACTGTTGGTGATCCAGTAT
 ```
 
 # Troubleshooting

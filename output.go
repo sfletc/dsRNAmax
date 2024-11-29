@@ -24,12 +24,12 @@ func outputResults(goodKmers map[string][]int, kmerLength *int, selConstruct *co
 		}
 		fmt.Println("Results written to", csvFileName)
 	}
-	// Calculate and output the geometric mean
-	mean, err := calculateMedian(modKmerHits)
+	// Calculate and output median
+	median, err := calculateMedian(modKmerHits)
 	if err != nil {
 		fmt.Println("Error calculating median:", err)
 	} else {
-		fmt.Println("\nMedian of kmer hits to each target sequence:", mean)
+		fmt.Println("\nMedian of kmer hits to each target sequence:", median)
 	}
 
 	// Other output information
@@ -97,7 +97,7 @@ func outputTable(goodKmers map[string][]int, kmerLength *int, selConstruct *cons
 }
 
 // Returns the kmers that match each input sequence
-// Use only after the best constrcut has been returned
+// Use only after the best construct has been returned
 func kmersPerInput(goodKmers map[string][]int, bestConstruct string, kmerLen int, headerNo int) [][]string {
 	kmersForInput := make([][]string, headerNo)
 	for i := 0; i < len(bestConstruct)-kmerLen+1; i++ {
@@ -129,7 +129,7 @@ func kmerStats(kmersPerInput [][]string) [][]float64 {
 		}
 		results = append(results, result)
 	}
-	// fmt.Println(results)
+
 	return results
 }
 
@@ -160,9 +160,10 @@ func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *cons
 	csvData = append(csvData, csvHeaders) // Append headers to the CSV data slice
 
 	// Iterate over each target sequence to prepare data for output and CSV
-	for i, j := range selConstruct.kmerHits {
+	for i, _ := range selConstruct.kmerHits {
 		if _, ok := headerMap[ref[i].Header]; !ok {
 			// Prepare row data for the terminal table output
+			modKmerHits = append(modKmerHits, int(kmerStats[i][3])) // Collect modified kmer hit counts
 			tableRow := []string{
 				ref[i].Header,
 				strconv.FormatFloat(kmerStats[i][3], 'f', 0, 64),
@@ -186,8 +187,7 @@ func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *cons
 			}
 			csvData = append(csvData, csvRow) // Append row data to the CSV data slice
 
-			modKmerHits = append(modKmerHits, j) // Collect modified kmer hit counts
-			headerMap[ref[i].Header] = true      // Mark header as processed
+			headerMap[ref[i].Header] = true // Mark header as processed
 		}
 	}
 

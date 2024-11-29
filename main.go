@@ -126,7 +126,7 @@ func main() {
 	kmerCts := kmerAbun(goodKmers)
 	selConstruct := conBestConstruct(goodKmers, kmerCts, *kmerLength, len(ref), *consLength, *iterations)
 	if selConstruct != nil {
-		log.Printf("Identified optimal construct of length %d with a median kmer match of %.2f\n", *consLength, selConstruct.medianHits)
+
 		outputResults(goodKmers, kmerLength, selConstruct, ref, *csv)
 	} else {
 		log.Println("Could not identify a dsRNA sense arm sequence. Check input format, increase OT kmer length, and/or try a shorter construct length")

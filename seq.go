@@ -52,7 +52,7 @@ func RefLoad(refFile string) []*HeaderRef {
 	return refSlice
 }
 
-// biasMod adds additional copies of the selected HeaderRef to a new HEaderREf slice.
+// biasMod adds additional copies of the selected HeaderRef to a new HeaderREf slice.
 // This biases kmer selection toward that HeaderRef at the cost of the overall geomean
 func biasMod(ref []*HeaderRef, header string, bias int) ([]*HeaderRef, error) {
 	var biasRef []*HeaderRef

@@ -192,10 +192,10 @@ func bcHelper(seqLen int, i int, constructLen int, kmerLen int, allScores [][]in
 			conScores[x] += y
 		}
 	}
-	mean, err := calculateMedian(conScores)
+	median, err := calculateMedian(conScores)
 	if err == nil {
-		if mean > bestScore {
-			bestScore = mean
+		if median > bestScore {
+			bestScore = median
 			bestPos = i
 			bestConScores = conScores
 		}

@@ -160,7 +160,7 @@ func generateRowData(kmerStats [][]float64, meanGC []float64, selConstruct *cons
 	csvData = append(csvData, csvHeaders) // Append headers to the CSV data slice
 
 	// Iterate over each target sequence to prepare data for output and CSV
-	for i, _ := range selConstruct.kmerHits {
+	for i := range selConstruct.kmerHits {
 		if _, ok := headerMap[ref[i].Header]; !ok {
 			// Prepare row data for the terminal table output
 			modKmerHits = append(modKmerHits, int(kmerStats[i][3])) // Collect modified kmer hit counts

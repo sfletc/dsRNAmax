@@ -28,7 +28,7 @@ dsRNAmax -h
 Output:
 ```
 dsRNAmax - dsRNA maximizer
-Version:         1.1.12
+Version:         1.1.14
 
 Usage of dsRNAmax:
   -biasHeader string
@@ -74,7 +74,7 @@ Loading target sequences...
 Getting target sequence kmers...
 3,358 target kmers loaded
 Finding best construct...
-Identified optimal construct of length 300 with a median kmer match of 235
+
 
 Results:
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+
@@ -116,7 +116,7 @@ Removing off-target kmers from FASTA files...
 Total off-target-matching kmers removed: 35
 
 2024/04/17 16:44:06 Finding best construct...
-2024/04/17 16:44:07 Identified optimal construct of length 300 with a median kmer match of 227.00
+
 
 Results:
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+
@@ -157,7 +157,7 @@ Removing off-target kmers from FASTA files...
 Total off-target-matching kmers removed: 35
 
 2024/04/18 10:40:39 Finding best construct...
-2024/04/18 10:40:40 Identified optimal construct of length 300 with a median kmer match of 280.00
+
 
 Results:
 +------------------------+--------------+--------------------+------------------+---------+---------+---------+

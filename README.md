@@ -181,4 +181,4 @@ Why was no dsRNA generated?
 
 # Cite
 
-Forthcoming.  
+[BioRxiv Preprint - Fletcher et al (2024) dsRNAmax: a Multi-Target Chimeric dsRNA Designer for Safe And Effective Crop Protection](https://www.biorxiv.org/content/10.1101/2024.12.15.628581v1)

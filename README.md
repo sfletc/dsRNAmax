@@ -180,5 +180,5 @@ Why was no dsRNA generated?
 
 
 # Cite
+NAR Genomics and Bioinformatics, Volume 7, Issue 2, June 2025, lqaf064, https://doi.org/10.1093/nargab/lqaf064
 
-[BioRxiv Preprint - Fletcher et al (2024) dsRNAmax: a Multi-Target Chimeric dsRNA Designer for Safe And Effective Crop Protection](https://www.biorxiv.org/content/10.1101/2024.12.15.628581v1)

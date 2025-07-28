@@ -10,6 +10,7 @@ import (
 )
 
 func TestRefLoad(t *testing.T) {
+	t.Logf("Running TestRefLoad")
 	var should_be []*HeaderRef
 	ref1 := &HeaderRef{"ref_1", "AAAAAAAAAAAAAAAAAAAAAAAAA", "TTTTTTTTTTTTTTTTTTTTTTTTT"}
 	ref2 := &HeaderRef{"ref_2", "GGGGGGGGGGGGGGGGGGGGGGGGTAAAAAAAAAAAAAAAAAAAAAAAAG", "CTTTTTTTTTTTTTTTTTTTTTTTTACCCCCCCCCCCCCCCCCCCCCCCC"}
@@ -33,6 +34,7 @@ func TestRefLoad(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := RefLoad(tt.args.refFile); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RefLoad() = %v, want %v", got, tt.want)
 			}
@@ -41,6 +43,7 @@ func TestRefLoad(t *testing.T) {
 }
 
 func Test_reverseComplement(t *testing.T) {
+	t.Logf("Running Test_reverseComplement")
 	type args struct {
 		seq string
 	}
@@ -66,6 +69,7 @@ func Test_reverseComplement(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := reverseComplement(tt.args.seq); got != tt.want {
 				t.Errorf("reverseComplement() = %v, want %v", got, tt.want)
 			}
@@ -74,6 +78,7 @@ func Test_reverseComplement(t *testing.T) {
 }
 
 func Test_getKmers(t *testing.T) {
+	t.Logf("Running Test_getKmers")
 	type args struct {
 		ref []*HeaderRef
 		nt  int
@@ -94,6 +99,7 @@ func Test_getKmers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := getKmers(tt.args.ref, tt.args.nt); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getKmers() = %v, want %v", got, tt.want)
 			}
@@ -102,6 +108,7 @@ func Test_getKmers(t *testing.T) {
 }
 
 func Test_conGetOTKmers(t *testing.T) {
+	t.Logf("Running Test_conGetOTKmers")
 	type args struct {
 		kmers   map[string][]int
 		otRef   []*HeaderRef
@@ -124,6 +131,7 @@ func Test_conGetOTKmers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := conGetOTKmers(tt.args.kmers, tt.args.otRef, tt.args.kmerLen); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("conGetOTKmers() = %v, want %v", got, tt.want)
 			}
@@ -132,6 +140,7 @@ func Test_conGetOTKmers(t *testing.T) {
 }
 
 func Test_removeOTKmers(t *testing.T) {
+	t.Logf("Running Test_removeOTKmers")
 	type args struct {
 		kmers   map[string][]int
 		otKmers map[string]struct{}
@@ -152,6 +161,7 @@ func Test_removeOTKmers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			removeOTKmers(tt.args.kmers, tt.args.otKmers)
 			if !reflect.DeepEqual(tt.args.kmers, tt.want) {
 				t.Errorf("removeOTKmers() got = %v, want %v", tt.args.kmers, tt.want)
@@ -161,6 +171,7 @@ func Test_removeOTKmers(t *testing.T) {
 }
 
 func Test_kmerAbun(t *testing.T) {
+	t.Logf("Running Test_kmerAbun")
 	type args struct {
 		kmers map[string][]int
 	}
@@ -179,6 +190,7 @@ func Test_kmerAbun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := kmerAbun(tt.args.kmers); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("kmerAbun() = %v, want %v", got, tt.want)
 			}
@@ -187,6 +199,7 @@ func Test_kmerAbun(t *testing.T) {
 }
 
 func Test_conBestConstruct(t *testing.T) {
+	t.Logf("Running Test_conBestConstruct")
 	type args struct {
 		goodKmers    map[string][]int
 		kmerCts      map[string]int
@@ -215,6 +228,7 @@ func Test_conBestConstruct(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := conBestConstruct(tt.args.goodKmers, tt.args.kmerCts, tt.args.kmerLen, tt.args.seqLen, tt.args.constructLen, tt.args.iterations); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("conBestConstruct() = %v, want %v", got, tt.want)
 			}
@@ -222,7 +236,8 @@ func Test_conBestConstruct(t *testing.T) {
 	}
 }
 
-func Test_mean(t *testing.T) {
+func Test_median(t *testing.T) {
+	t.Logf("Running Test_mean")
 	type args struct {
 		input []int
 	}
@@ -251,6 +266,7 @@ func Test_mean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			got, err := calculateMedian(tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("median() error = %v, wantErr %v", err, tt.wantErr)
@@ -266,6 +282,7 @@ func Test_mean(t *testing.T) {
 // TestRemoveMappedLongOTKmers verifies that the removeMappedLongOTKmers function
 // removes keys from goodKmers that contain any key from otKmers as a substring.
 func TestRemoveMappedLongOTKmers(t *testing.T) {
+	t.Logf("Running TestRemoveMappedLongOTKmers")
 	// Define a test case structure
 	tests := []struct {
 		name      string
@@ -308,6 +325,7 @@ func TestRemoveMappedLongOTKmers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			removeMappedLongOTKmers(tt.goodKmers, tt.otKmers)
 			if !reflect.DeepEqual(tt.goodKmers, tt.expected) {
 				t.Errorf("removeMappedLongOTKmers() got = %v, want %v", tt.goodKmers, tt.expected)
@@ -318,6 +336,7 @@ func TestRemoveMappedLongOTKmers(t *testing.T) {
 
 // TestLoadAndSendSeqs tests the LoadAndSendSeqs function to ensure it sends the correct sequences.
 func TestLoadAndSendSeqs(t *testing.T) {
+	t.Logf("Running TestLoadAndSendSeqs")
 	// Create a temporary file to simulate the fasta file input
 	tmpFile, err := os.CreateTemp("", "example.*.fasta")
 	if err != nil {
@@ -403,6 +422,7 @@ func createTempFastaFile(sequences []string, t *testing.T) string {
 }
 
 func TestKmerCheckSeqs(t *testing.T) {
+	t.Logf("Running TestKmerCheckSeqs")
 	seqChan := make(chan string, 10)                   // Buffered for sending test sequences without blocking.
 	toDeleteChan := make(chan map[string]struct{}, 10) // Buffered to receive toDelete maps without blocking.
 	wg := &sync.WaitGroup{}
@@ -463,6 +483,7 @@ func TestKmerCheckSeqs(t *testing.T) {
 
 // TestConcurrentlyProcessSequences tests the ConcurrentlyProcessSequences function
 func TestConcurrentlyProcessSequences(t *testing.T) {
+	t.Logf("Running TestConcurrentlyProcessSequences")
 	// Arrange
 	refSequences := []string{
 		">seq1",
@@ -503,6 +524,7 @@ func TestConcurrentlyProcessSequences(t *testing.T) {
 
 // TestGenerateSubKmersMap provides test cases for the GenerateSubKmersMap function.
 func TestGenerateSubKmersMap(t *testing.T) {
+	t.Logf("Running TestGenerateSubKmersMap")
 	tests := []struct {
 		name       string
 		goodKmers  map[string][]int // Assuming the type should be map[string]struct{} as per original function
@@ -531,9 +553,42 @@ func TestGenerateSubKmersMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Logf("Subtest: %s", tt.name)
 			if got := GenerateSubKmersMap(tt.goodKmers, tt.subKmerLen); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GenerateSubKmersMap() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_workerBCWithSeed_seed_usage(t *testing.T) {
+	t.Logf("Running Test_workerBCWithSeed_seed_usage")
+	goodKmers := map[string][]int{
+		"AAA": {1, 1},
+		"CCC": {2, 1},
+		"GGG": {1, 1},
+	}
+	kmerCts := map[string]int{
+		"AAA": 2,
+		"CCC": 3,
+		"GGG": 3,
+	}
+	kmerLen := 3
+	seqLen := 2
+	constructLen := 3
+	initKmer := "CCC"
+
+	consSeqsChan := make(chan *construct, 1)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go workerBCWithSeed(goodKmers, kmerCts, kmerLen, seqLen, constructLen, consSeqsChan, wg, initKmer)
+	wg.Wait()
+	close(consSeqsChan)
+	result := <-consSeqsChan
+	if result == nil || result.seq == "" {
+		t.Fatalf("workerBCWithSeed returned nil or empty result: got=%v", result)
+	}
+	if len(result.seq) < kmerLen || result.seq[:kmerLen] != initKmer {
+		t.Errorf("Expected construct to start with seed kmer '%s', got %v", initKmer, result.seq)
 	}
 }

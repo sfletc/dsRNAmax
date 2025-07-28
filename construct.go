@@ -48,11 +48,38 @@ type construct struct {
 
 // Concurrent implementation to identify the best construct over multiple iterations
 func conBestConstruct(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, seqLen int, constructLen int, iterations int) *construct {
+	// Build a sorted slice of kmers by abundance
+	var kmerSeq []string
+	for k := range kmerCts {
+		kmerSeq = append(kmerSeq, k)
+	}
+	sort.Slice(kmerSeq, func(i, j int) bool {
+		return kmerCts[kmerSeq[i]] > kmerCts[kmerSeq[j]]
+	})
+
 	wg := &sync.WaitGroup{}
 	wg.Add(iterations)
 	consSeqsChan := make(chan *construct, iterations)
 	for a := 0; a < iterations; a++ {
-		go workerBC(goodKmers, kmerCts, kmerLen, seqLen, constructLen, consSeqsChan, wg)
+		// Find all kmers with the highest abundance
+		highest := kmerCts[kmerSeq[0]]
+		var candidates []string
+		for _, k := range kmerSeq {
+			if kmerCts[k] == highest {
+				candidates = append(candidates, k)
+			} else {
+				break
+			}
+		}
+		// Randomly select among candidates if tie, else use the only one
+		var initKmer string
+		if len(candidates) > 1 {
+			r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(a)))
+			initKmer = candidates[r.Intn(len(candidates))]
+		} else {
+			initKmer = candidates[0]
+		}
+		go workerBCWithSeed(goodKmers, kmerCts, kmerLen, seqLen, constructLen, consSeqsChan, wg, initKmer)
 	}
 	go func(cs chan *construct, wg *sync.WaitGroup) {
 		wg.Wait()
@@ -62,22 +89,14 @@ func conBestConstruct(goodKmers map[string][]int, kmerCts map[string]int, kmerLe
 	return selConstruct
 }
 
-// Worker function for a single iteration of identifying the best construct among the input sequences
-// Randomly selects an initKmer, then build forward and backward based on the highest no. of kmer matches
-// to each input sequences for a given extension nucleotide until no nucleotides can be added.  kmers are removed
-// from the input kmer map upon extension.  The best constrcut with the assembled sequences is selected based on maximising
-// the geometric mean of input kmer hits.
-
-func workerBC(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, seqLen int, constructLen int, consSeqsChan chan *construct, wg *sync.WaitGroup) {
+// Worker function for a single iteration, now takes initKmer as argument
+func workerBCWithSeed(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, seqLen int, constructLen int, consSeqsChan chan *construct, wg *sync.WaitGroup, initKmer string) {
 	var kmerSeq []string
 	kmerCtsCpy := make(map[string]int)
 	for k, v := range kmerCts {
 		kmerCtsCpy[k] = v
 		kmerSeq = append(kmerSeq, k)
 	}
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	randomIndex := r.Intn(len(kmerSeq))
-	initKmer := kmerSeq[randomIndex]
 	fcons := buildf(kmerCtsCpy, initKmer, kmerLen)
 	bcons := buildr(kmerCtsCpy, fcons, kmerLen)
 	construct, _ := bestConstruct(goodKmers, bcons, constructLen, kmerLen, seqLen)

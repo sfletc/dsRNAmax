@@ -63,14 +63,14 @@ An example command and command line output is shown for the western corn rootwor
 
 Command:
 ```
-dsRNAmax -targets wstrn_sthrn_corn_rootowrm_vATPaseA.fa 
+dsRNAmax -targets wstrn_sthrn_corn_rootworm_vATPaseA.fa 
 
 ```
 Output:
 ```
 
-dsRNAmax - dsRNA maximizer (Version: 1.1.12)
-Target FASTA File: wstrn_sthrn_corn_rootowrm_vATPaseA.fa
+dsRNAmax - dsRNA maximizer (Version: 1.1.15)
+Target FASTA File: wstrn_sthrn_corn_rootworm_vATPaseA.fa
 Loading target sequences...
    ---> 2 sequences loaded
 Getting target sequence kmers...
@@ -103,12 +103,12 @@ In this example, the transcriptome of the beneficial seven-spotted ladybeetle is
 
 Command:
 ```
-dsRNAmax -targets wstrn_sthrn_corn_rootowrm_vATPaseA.fa -offTargets 7_spotted_ladybird.fa 
+dsRNAmax -targets wstrn_sthrn_corn_rootworm_vATPaseA.fa -offTargets 7_spotted_ladybird.fa 
 ```
 Output:
 ```
-dsRNAmax - dsRNA maximizer (Version: 1.1.12)
-Target FASTA File: wstrn_sthrn_corn_rootowrm_vATPaseA.fa
+dsRNAmax - dsRNA maximizer (Version: 1.1.15)
+Target FASTA File: wstrn_sthrn_corn_rootworm_vATPaseA.fa
 Off-target FASTA File: 7_spotted_ladybird.fa
 Loading target sequences...
    ---> 2 sequences loaded
@@ -141,14 +141,14 @@ AGGTAAAGCATCTCTAGCAGAAACGGACAAAATCACCTTGGAAATTGCCAGGCTTCTTAAAGAAGATTTCTTGCAACAAA
 In some cases, it's desirable to maximise the number of kmers matching a particular sequence, while still maintaining effectiveness against other input targets.  This can be achieved by using ```-biasLvL``` and ```-biasHeader```.  For ```-biasHeader```, the full header (excluding ">") should be entered - use quotes if there are spaces.  For ```-biasLvl```, input an integer for the degree of bias to apply.  The integer used will add additional copies of the selected sequence to the design process, with its effect depended on the total number of input target sequences, so it's worth trialling different degrees of bias (starting at 1).  
 
 ```
-dsRNAmax -targets wstrn_sthrn_corn_rootowrm_vATPaseA.fa -offTargets 7_spotted_ladybird.fa -biasHeader WCR_vATPase_A -biasLvl 1
+dsRNAmax -targets wstrn_sthrn_corn_rootworm_vATPaseA.fa -offTargets 7_spotted_ladybird.fa -biasHeader WCR_vATPase_A -biasLvl 1
 ```
 
 Output:
 
 ```
-dsRNAmax - dsRNA maximizer (Version: 1.1.12)
-Target FASTA File: wstrn_sthrn_corn_rootowrm_vATPaseA.fa
+dsRNAmax - dsRNA maximizer (Version: 1.1.15)
+Target FASTA File: wstrn_sthrn_corn_rootworm_vATPaseA.fa
 Off-target FASTA File: 7_spotted_ladybird.fa
 Loading target sequences...
    ---> 2 sequences loaded

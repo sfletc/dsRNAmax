@@ -53,6 +53,9 @@ jobs:
       with:
         files: dsRNAmax-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
         fail_on_unmatched_files: true
+        # Tags with a pre-release suffix (e.g. v1.1.15-beta.1) are marked as a
+        # GitHub pre-release; clean tags (e.g. v1.1.15) are full releases.
+        prerelease: ${{ contains(github.ref_name, '-') }}
         body: |
           ## Download Instructions
 

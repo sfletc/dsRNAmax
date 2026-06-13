@@ -3,6 +3,8 @@
 dsRNAmax (dsRNAmaximizer) uses a kmer-based approach for multi-target dsRNA design and off-target avoidance. The package maximizes the number of kmers (default = 21nt, a common length of DICER-processed siRNAs) that perfectly match each input target sequence while avoiding any contiguous match of a specified length to any off-target sequence (default = 21nt, but this off-target kmer length can be less than the target kmer length).
     
 
+> **Beta build available:** A pre-release with the latest bug fixes (`v1.1.15-beta.1`) is on the [Releases page](https://github.com/sfletc/dsRNAmax/releases) for testing ahead of the next stable version. Bug reports and feedback are welcome via [Issues](https://github.com/sfletc/dsRNAmax/issues).
+
 ![Alt text](./bioinf_github.jpg "dsRNA design")
 
 
@@ -12,7 +14,7 @@ dsRNAmax (dsRNAmaximizer) uses a kmer-based approach for multi-target dsRNA desi
 
 - For Linux and MacOS, ```chmod +x {executable}``` may be required.  
 
-- To compile from source, [install Go](https://go.dev/doc/install), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencies downloaded automatically.      
+- To compile from source, [install Go](https://go.dev/doc/install) (1.18 or newer), clone this repository, and build with ```go build``` - this will generate an executable for the operating system it was built on, with build dependencies downloaded automatically.      
 
 
 # Usage
@@ -180,5 +182,12 @@ Why was no dsRNA generated?
 
 
 # Cite
-NAR Genomics and Bioinformatics, Volume 7, Issue 2, June 2025, lqaf064, https://doi.org/10.1093/nargab/lqaf064
+
+If you use dsRNAmax, please cite:
+
+Stephen J Fletcher, Jai Lawrence, Anne Sawyer, Narelle Manzie, Donald M Gardiner, Neena Mitter, Christopher A Brosnan. dsRNAmax: a multi-target chimeric dsRNA designer for safe and effective crop protection. NAR Genomics and Bioinformatics, Volume 7, Issue 2, June 2025, lqaf064, https://doi.org/10.1093/nargab/lqaf064
+
+# License
+
+Released under the BSD 3-Clause License - see [LICENSE](LICENSE).
 

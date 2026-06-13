@@ -1,0 +1,12 @@
+# Compiled binaries (the build output is named after the module)
+/dsRNAmax
+dsRNAmax-*
+*.exe
+
+# Go test / build artifacts
+*.test
+*.out
+coverage.*
+
+# macOS
+.DS_Store

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "1.1.14"
+var Version = "1.1.15"
 
 func errorShutdown() {
 	fmt.Println("\nExiting program")
@@ -58,7 +58,7 @@ func clInput() (*string, *string, *int, *string, *int, *int, *int, *string, *int
 	csv := flag.String("csv", "", "CSV file name (optional)")
 	flag.Parse()
 	if *refFile == "" {
-		return refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, errors.New("error: no target FASTA file was specificed")
+		return refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, errors.New("error: no target FASTA file was specified")
 	}
 	return refFile, otRefFiles, kmerLength, otKmerFile, otKmerLength, consLength, iterations, biasHeader, biasLvl, csv, nil
 }
@@ -98,6 +98,9 @@ func main() {
 	log.Println("Getting target sequence kmers...")
 	goodKmers := getKmers(ref, *kmerLength)
 	log.Printf("%s target kmers loaded\n", intWithCommas(len(goodKmers)))
+	if len(goodKmers) == 0 {
+		log.Fatalf("No target kmers could be extracted. Ensure target sequences are at least as long as the kmer length (%d) and try a shorter -kmerLen if needed.", *kmerLength)
+	}
 
 	if *otRefFiles != "" && *otKmerFile != "" {
 		log.Fatalln("Error: both off-target FASTA files and an off-target kmer file specified. Please specify only one.")

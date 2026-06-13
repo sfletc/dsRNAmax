@@ -28,7 +28,7 @@ dsRNAmax -h
 Output:
 ```
 dsRNAmax - dsRNA maximizer
-Version:         1.1.14
+Version:         1.1.15
 
 Usage of dsRNAmax:
   -biasHeader string
@@ -57,7 +57,7 @@ Usage of dsRNAmax:
 
 ### dsRNA design for multiple target sequences
 
-An example command and command line output is shown for the western corn rootworm and southern corn rootworm vATPase-A transcripts using the ```-targets``` flag.  Statistics for the output dsRNA include the number of sense-arm derived kmers perfectly matching each target sequence (maximum = dsRNA length - kmer length +1), the Smith-Waterman-Gotoh similarity of the sense arm to each target sequence, mean kmer GC content, and the percentage of kmers (in both orientations) with a 5'U, 5'A and 5'C.  The geometric mean of kmers matching to each target sequences along with the sense arm GC content are also shown.  
+An example command and command line output is shown for the western corn rootworm and southern corn rootworm vATPase-A transcripts using the ```-targets``` flag.  Statistics for the output dsRNA include the number of sense-arm derived kmers perfectly matching each target sequence (maximum = dsRNA length - kmer length +1), the Smith-Waterman-Gotoh similarity of the sense arm to each target sequence, mean kmer GC content, and the percentage of kmers (in both orientations) with a 5'U, 5'A and 5'C.  The median of kmers matching to each target sequence along with the sense arm GC content are also shown.  
 
 Command:
 ```

@@ -5,33 +5,12 @@ on:
     tags:
       - 'v*'
 
+# Required so the default GITHUB_TOKEN can create the release and upload assets.
+permissions:
+  contents: write
+
 jobs:
-  create_release:
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          ## Download Instructions
-
-          - For Linux (64-bit): Download `dsRNAmax-linux-amd64`
-          - For Linux (ARM64): Download `dsRNAmax-linux-arm64`
-          - For Windows (64-bit): Download `dsRNAmax-windows-amd64.exe`
-          - For macOS (Intel): Download `dsRNAmax-darwin-amd64`
-          - For macOS (Apple Silicon): Download `dsRNAmax-darwin-arm64`
-        draft: false
-        prerelease: false
-
   build:
-    needs: create_release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,12 +27,12 @@ jobs:
             arch: arm64
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.22
+        go-version: '1.22'
 
     - name: Download dependencies
       run: go mod download
@@ -63,14 +42,22 @@ jobs:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
       run: |
-        go build -o dsRNAmax
+        # Strip the leading "v" from the tag (e.g. v1.1.15 -> 1.1.15) and bake it
+        # into the binary so -h reports the released version.
+        VERSION="${GITHUB_REF_NAME#v}"
+        OUT="dsRNAmax-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}"
+        go build -ldflags "-X main.Version=${VERSION}" -o "${OUT}"
 
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
-        upload_url: ${{ needs.create_release.outputs.upload_url }}
-        asset_path: ./dsRNAmax
-        asset_name: dsRNAmax-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
-        asset_content_type: application/octet-stream
+        files: dsRNAmax-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
+        fail_on_unmatched_files: true
+        body: |
+          ## Download Instructions
+
+          - For Linux (64-bit): Download `dsRNAmax-linux-amd64`
+          - For Linux (ARM64): Download `dsRNAmax-linux-arm64`
+          - For Windows (64-bit): Download `dsRNAmax-windows-amd64.exe`
+          - For macOS (Intel): Download `dsRNAmax-darwin-amd64`
+          - For macOS (Apple Silicon): Download `dsRNAmax-darwin-arm64`

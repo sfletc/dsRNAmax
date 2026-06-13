@@ -70,109 +70,6 @@ func getKmers(ref []*HeaderRef, kmerLen int) map[string][]int {
 	return kmers
 }
 
-// removeOTKmers removes off-target kmers from the 'goodKmers' map.
-//
-// Args:
-//
-//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
-//	otKmers: A map where keys are identified off-target kmers.
-func removeOTKmers(goodKmers map[string][]int, otKmers map[string]struct{}) {
-	for key := range otKmers {
-		delete(goodKmers, key)
-	}
-}
-
-// removeMappedLongOTKmers removes target kmers from the 'goodKmers' map if they contain any of the provided off-target kmers as substrings.
-// This helps filter out potential off-target effects even if there's not an exact match.
-//
-// Args:
-//
-//	goodKmers: A map where keys are target kmers and values are presence/absence slices.
-//	otKmers: A map where keys are identified off-target kmers.
-func removeMappedLongOTKmers(goodKmers map[string][]int, otKmers map[string]struct{}) {
-	for ok := range otKmers {
-		for gk := range goodKmers {
-			if strings.Contains(gk, ok) {
-				delete(goodKmers, gk)
-			}
-		}
-	}
-}
-
-// conGetOTKmers identifies off-target kmers present in a set of off-target sequences, performing the search concurrently for efficiency.
-//
-// Args:
-//
-//	kmers: A map where keys are target kmers and values are presence/absence slices.
-//	otRef: A slice of HeaderRef structures containing off-target sequences.
-//	kmerLen: The length of kmers to search for.
-//
-// Returns:
-//
-//	A map[string]struct{} where keys represent off-target kmers found within the provided off-target sequences.
-func conGetOTKmers(kmers map[string][]int, otRef []*HeaderRef, kmerLen int) map[string]struct{} {
-	wg := &sync.WaitGroup{}
-	wg.Add(len(otRef))
-	otRefChan := make(chan *HeaderRef, len(otRef))
-	for _, header_ref_pair := range otRef {
-		otRefChan <- header_ref_pair
-	}
-	close(otRefChan)
-	headerKmerChan := make(chan map[string]struct{})
-
-	for a := 0; a < len(otRef); a++ {
-		go workerGo(kmers, otRefChan, kmerLen, headerKmerChan, wg)
-	}
-	go func(cs chan map[string]struct{}, wg *sync.WaitGroup) {
-		wg.Wait()
-		close(cs)
-	}(headerKmerChan, wg)
-	allOTKmers := compileOTKmers(headerKmerChan)
-	return allOTKmers
-}
-
-// workerGo is a concurrent worker function that processes a single off-target sequence for off-target kmer identification.
-//
-// Args:
-//
-//	kmers: A map where keys are target kmers and values are presence/absence slices.
-//	otRefChan: A channel receiving HeaderRef structures (off-target sequences).
-//	kmerLen: The length of kmers to search for.
-//	headerKmerChan: A channel for sending maps of identified off-target kmers.
-//	wg: A WaitGroup for synchronization with the main process.
-func workerGo(kmers map[string][]int, otRefChan chan *HeaderRef, kmerLen int, headerKmerChan chan map[string]struct{}, wg *sync.WaitGroup) {
-	otRef := <-otRefChan
-	otKmers := make(map[string]struct{})
-
-	pos := 0
-	for pos <= len(otRef.Seq)-kmerLen {
-		fseq := otRef.Seq[pos : pos+kmerLen]
-		if _, ok := kmers[fseq]; ok {
-			otKmers[fseq] = struct{}{}
-		}
-		rseq := otRef.ReverseSeq[pos : pos+kmerLen]
-		if _, ok := kmers[rseq]; ok {
-			otKmers[rseq] = struct{}{}
-		}
-		pos++
-	}
-	if len(otKmers) > 0 {
-		headerKmerChan <- otKmers
-	}
-	wg.Done()
-}
-
-// Kmer maps in the output queue are compiled into a single off-target kmer map
-func compileOTKmers(headerKmerChan chan map[string]struct{}) map[string]struct{} {
-	allOTKmers := make(map[string]struct{})
-	for OTkmers := range headerKmerChan {
-		for OTkmer := range OTkmers {
-			allOTKmers[OTkmer] = struct{}{}
-		}
-	}
-	return allOTKmers
-}
-
 // Kmer abundance (max = no. of input_target_sequences) calculated for each target kmer
 func kmerAbun(kmers map[string][]int) map[string]int {
 	kmerCts := make(map[string]int)
@@ -291,10 +188,18 @@ func smallKmerCheckSeqs(seqChan <-chan string, subKmers map[string][]string, sub
 func GenerateSubKmersMap(goodKmers map[string][]int, subKmerLen int) map[string][]string {
 	subKmers := make(map[string][]string)
 
+	// A sub-kmer length of zero (or longer than the kmers themselves) is invalid;
+	// return an empty map rather than silently producing garbage.
+	if subKmerLen <= 0 {
+		return subKmers
+	}
+
 	// Iterate through all k-mers in the input map
 	for kmer := range goodKmers {
-		if len(kmer) < subKmerLen || subKmerLen == 0 { //TODO: prob should throw an error
-			return subKmers
+		if len(kmer) < subKmerLen {
+			// This kmer is too short to contain a sub-kmer; skip it rather
+			// than abandoning the whole map.
+			continue
 		}
 		// Generate all possible substrings of the specified length from the kmer
 		for i := 0; i <= len(kmer)-subKmerLen; i++ {

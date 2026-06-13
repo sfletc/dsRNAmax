@@ -39,7 +39,7 @@ import (
 )
 
 // construct struct contains kmerHits slice (total present in each input target),
-// the geometric mean of the slice, and the sequence of the selected construct
+// the median of the slice, and the sequence of the selected construct
 type construct struct {
 	kmerHits   []int
 	medianHits float64
@@ -48,6 +48,13 @@ type construct struct {
 
 // Concurrent implementation to identify the best construct over multiple iterations
 func conBestConstruct(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, seqLen int, constructLen int, iterations int) *construct {
+	// With no candidate kmers there is nothing to build from (e.g. all target
+	// sequences are shorter than the kmer length, or off-target filtering removed
+	// everything). Return nil so the caller can report this cleanly rather than
+	// each worker panicking on rand.Intn(0).
+	if len(kmerCts) == 0 {
+		return nil
+	}
 	wg := &sync.WaitGroup{}
 	wg.Add(iterations)
 	consSeqsChan := make(chan *construct, iterations)
@@ -65,8 +72,8 @@ func conBestConstruct(goodKmers map[string][]int, kmerCts map[string]int, kmerLe
 // Worker function for a single iteration of identifying the best construct among the input sequences
 // Randomly selects an initKmer, then build forward and backward based on the highest no. of kmer matches
 // to each input sequences for a given extension nucleotide until no nucleotides can be added.  kmers are removed
-// from the input kmer map upon extension.  The best constrcut with the assembled sequences is selected based on maximising
-// the geometric mean of input kmer hits.
+// from the input kmer map upon extension.  The best construct with the assembled sequences is selected based on maximising
+// the median of input kmer hits.
 
 func workerBC(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, seqLen int, constructLen int, consSeqsChan chan *construct, wg *sync.WaitGroup) {
 	var kmerSeq []string
@@ -85,7 +92,7 @@ func workerBC(goodKmers map[string][]int, kmerCts map[string]int, kmerLen int, s
 	wg.Done()
 }
 
-// Checks all the generated constrcuts and retains the best (highest geomean)
+// Checks all the generated constructs and retains the best (highest median)
 func compileConsSeqs(consSeqsChan chan *construct) *construct {
 	var selConstruct *construct
 	best := 0.0
@@ -161,7 +168,7 @@ func buildr(kmerCtsCpy map[string]int, fcons string, kmerLen int) string {
 }
 
 // Select the best construct of the specified length from the provided consensus sequence
-// by maximising the geometric mean of the number of kmers to match each input target sequence
+// by maximising the median of the number of kmers to match each input target sequence
 func bestConstruct(goodKmers map[string][]int, consensus string, constructLen int, kmerLen int, seqLen int) (*construct, error) {
 	if len(consensus) < constructLen {
 		var bad []int
@@ -171,11 +178,11 @@ func bestConstruct(goodKmers map[string][]int, consensus string, constructLen in
 	bestPos := 0
 	var bestConScores []int
 	var allScores [][]int
-	for i := 0; i < len(consensus)-kmerLen; i++ {
+	for i := 0; i <= len(consensus)-kmerLen; i++ {
 		s := goodKmers[consensus[i:i+kmerLen]]
 		allScores = append(allScores, s)
 	}
-	for i := 0; i < len(consensus)-constructLen; i++ {
+	for i := 0; i <= len(consensus)-constructLen; i++ {
 		bestScore, bestPos, bestConScores = bcHelper(seqLen, i, constructLen, kmerLen, allScores, bestScore, bestPos, bestConScores)
 	}
 	return &construct{bestConScores, bestScore, consensus[bestPos : bestPos+constructLen]}, nil

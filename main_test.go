@@ -101,65 +101,6 @@ func Test_getKmers(t *testing.T) {
 	}
 }
 
-func Test_conGetOTKmers(t *testing.T) {
-	type args struct {
-		kmers   map[string][]int
-		otRef   []*HeaderRef
-		kmerLen int
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string]struct{}
-	}{
-		{
-			name: "conGetOTKmersSuccess",
-			args: args{
-				kmers:   map[string][]int{"ACGT": {1, 1}, "CGTA": {1, 0}},
-				otRef:   []*HeaderRef{{"test", "ACGTA", "TACGT"}, {"test2", "ACGT", "ACGT"}},
-				kmerLen: 4,
-			},
-			want: map[string]struct{}{"ACGT": {}, "CGTA": {}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := conGetOTKmers(tt.args.kmers, tt.args.otRef, tt.args.kmerLen); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("conGetOTKmers() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_removeOTKmers(t *testing.T) {
-	type args struct {
-		kmers   map[string][]int
-		otKmers map[string]struct{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string][]int
-	}{
-		{
-			name: "removeKmerSuccess",
-			args: args{
-				kmers:   map[string][]int{"ACGT": {1, 1}, "CGTA": {1, 0}, "GTC": {0, 1}, "AATC": {1, 1}},
-				otKmers: map[string]struct{}{"ACGT": {}, "CGTA": {}, "GTC": {}},
-			},
-			want: map[string][]int{"AATC": {1, 1}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			removeOTKmers(tt.args.kmers, tt.args.otKmers)
-			if !reflect.DeepEqual(tt.args.kmers, tt.want) {
-				t.Errorf("removeOTKmers() got = %v, want %v", tt.args.kmers, tt.want)
-			}
-		})
-	}
-}
-
 func Test_kmerAbun(t *testing.T) {
 	type args struct {
 		kmers map[string][]int
@@ -258,59 +199,6 @@ func Test_mean(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("median() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// TestRemoveMappedLongOTKmers verifies that the removeMappedLongOTKmers function
-// removes keys from goodKmers that contain any key from otKmers as a substring.
-func TestRemoveMappedLongOTKmers(t *testing.T) {
-	// Define a test case structure
-	tests := []struct {
-		name      string
-		goodKmers map[string][]int
-		otKmers   map[string]struct{}
-		expected  map[string][]int
-	}{
-		{
-			name: "remove substrings",
-			goodKmers: map[string][]int{
-				"ACTGG": {1},
-				"ACTGA": {1},
-				"GGCTC": {1},
-				"TGACC": {1},
-			},
-			otKmers: map[string]struct{}{
-				"ACT": {}, // "ACTG" and "ACTGA" should be removed
-				"TG":  {}, // "TGAC" should be removed
-			},
-			expected: map[string][]int{
-				"GGCTC": {1}, // Only "GACT" should remain
-			},
-		},
-		{
-			name: "no removal when no substrings match",
-			goodKmers: map[string][]int{
-				"AAAA": {1},
-				"CCCC": {1},
-			},
-			otKmers: map[string]struct{}{
-				"GGGG": {},
-			},
-			expected: map[string][]int{
-				"AAAA": {1},
-				"CCCC": {1},
-			},
-		},
-		// Add more test cases as needed
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			removeMappedLongOTKmers(tt.goodKmers, tt.otKmers)
-			if !reflect.DeepEqual(tt.goodKmers, tt.expected) {
-				t.Errorf("removeMappedLongOTKmers() got = %v, want %v", tt.goodKmers, tt.expected)
 			}
 		})
 	}

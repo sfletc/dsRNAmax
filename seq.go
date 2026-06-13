@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// HeaderRef is a struct comprising a reference sequence header, seques and reverse complement
+// HeaderRef is a struct comprising a reference sequence header, sequence and reverse complement
 type HeaderRef struct {
 	Header     string
 	Seq        string
@@ -53,7 +53,7 @@ func RefLoad(refFile string) []*HeaderRef {
 }
 
 // biasMod adds additional copies of the selected HeaderRef to a new HeaderREf slice.
-// This biases kmer selection toward that HeaderRef at the cost of the overall geomean
+// This biases kmer selection toward that HeaderRef at the cost of the overall median
 func biasMod(ref []*HeaderRef, header string, bias int) ([]*HeaderRef, error) {
 	var biasRef []*HeaderRef
 	headerPresent := false

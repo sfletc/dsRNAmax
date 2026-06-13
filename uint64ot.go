@@ -56,22 +56,36 @@ func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[u
 		}()
 	}
 
-	// Read large chunks of data and send to worker goroutines
+	// Read large chunks of data and send to worker goroutines. file.Read makes no
+	// alignment guarantee, so carry any bytes that don't complete a kmer over to
+	// the next read rather than splitting a kmer across a chunk boundary (which
+	// would both misread kmers and risk an out-of-range slice in processChunk).
 	buf := make([]byte, chunkSize)
+	var leftover []byte
 	for {
 		bytesRead, err := file.Read(buf)
+		if bytesRead > 0 {
+			data := make([]byte, 0, len(leftover)+bytesRead)
+			data = append(data, leftover...)
+			data = append(data, buf[:bytesRead]...)
+
+			whole := (len(data) / kmerSize) * kmerSize
+			if whole > 0 {
+				chunk := make([]byte, whole)
+				copy(chunk, data[:whole])
+				kmerChan <- chunk
+			}
+			leftover = data[whole:] // carry the partial-kmer remainder forward
+		}
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return nil, fmt.Errorf("error reading file: %v", err)
 		}
-
-		if bytesRead > 0 {
-			chunk := make([]byte, bytesRead)
-			copy(chunk, buf[:bytesRead])
-			kmerChan <- chunk
-		}
+	}
+	if len(leftover) > 0 {
+		log.Printf("Warning: ignoring %d trailing byte(s) that do not form a complete kmer", len(leftover))
 	}
 
 	close(kmerChan)
@@ -90,7 +104,10 @@ func removeOffTargetUint64KmersConcurrent(filename string, goodUint64Kmers map[u
 }
 
 func processChunk(chunk []byte, kmerSize, k int, goodUint64Kmers map[uint64]struct{}, localRemovedKmers map[string]struct{}) {
-	for j := 0; j < len(chunk); j += kmerSize {
+	// Only process whole kmers: j+kmerSize must stay within the chunk. The reader
+	// guarantees 8-byte-aligned chunks, but this bound is cheap insurance against a
+	// short/unaligned chunk causing an out-of-range slice panic.
+	for j := 0; j+kmerSize <= len(chunk); j += kmerSize {
 		var kmer uint64
 		buf := bytes.NewReader(chunk[j : j+kmerSize])
 		if err := binary.Read(buf, binary.LittleEndian, &kmer); err != nil {
@@ -215,7 +232,7 @@ func removeOffTargetKmersFromGoodKmers(goodKmers map[string][]int, offTargetKmer
 	case OTKmerLen > goodKmerLength:
 		return fmt.Errorf("off-target kmer length is greater than target kmer length - it must be equal or lower")
 	case OTKmerLen < goodKmerLength:
-		removeOffTargetSubKmersFromGoodKmers(goodKmers, offTargetKmersFile, OTKmerLen)
+		return removeOffTargetSubKmersFromGoodKmers(goodKmers, offTargetKmersFile, OTKmerLen)
 	default:
 		// Convert the good k-mers to canonical uint64 representation
 		goodUint64Kmers, err := convertGoodKmersToUint64Set(goodKmers, goodKmerLength)
